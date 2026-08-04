@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Panel - Dashboard gestione elementi, note e task 100% client-side">
+  <title>PanLink</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div class="header__content">
+      <div class="header__brand">
+        <svg
+          class="header__logo"
+          width="60"
+          height="60"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#8b5cf6" />
+            </linearGradient>
+          </defs>
+          
+          <!-- Modern interconnected nodes forming P and L -->
+          <!-- Node network -->
+          <circle cx="30" cy="30" r="8" fill="url(#gradient1)" />
+          <circle cx="50" cy="20" r="6" fill="url(#gradient1)" opacity="0.8" />
+          <circle cx="70" cy="30" r="8" fill="url(#gradient1)" />
+          <circle cx="30" cy="70" r="8" fill="url(#gradient1)" />
+          <circle cx="70" cy="70" r="8" fill="url(#gradient1)" />
+          <circle cx="85" cy="85" r="6" fill="url(#gradient1)" opacity="0.8" />
+          
+          <!-- Connecting lines -->
+          <line x1="30" y1="30" x2="50" y2="20" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
+          <line x1="50" y1="20" x2="70" y2="30" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
+          <line x1="30" y1="30" x2="30" y2="70" stroke="url(#gradient1)" strokeWidth="3" />
+          <line x1="70" y1="30" x2="70" y2="70" stroke="url(#gradient1)" strokeWidth="3" />
+          <line x1="70" y1="70" x2="85" y2="85" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
+          
+          <!-- Abstract P curve -->
+          <path
+            d="M 30 30 Q 60 15 70 30"
+            stroke="url(#gradient1)"
+            strokeWidth="2.5"
+            fill="none"
+            opacity="0.4"
+          />
+        </svg>
+        
+        <div class="header__brand-text">
+          <h1 class="header__title">Dashboard</h1>
+          <p class="header__subtitle">gestione elementi, link, note e task</p>
+        </div>
+      </div>
+
+      <div class="header__controls">
+        <button id="sidebarToggle" class="btn btn--icon sidebar-toggle" aria-label="Apri menu navigazione" aria-controls="appSidebar" aria-expanded="false" title="Menu">
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <button 
+          id="darkModeToggle" 
+          class="btn btn--icon" 
+          aria-pressed="false" 
+          title="Attiva/Disattiva modalità scura"
+          aria-label="Toggle dark mode"
+        >
+          <span class="material-icons">dark_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar Navigation -->
+  <aside id="appSidebar" class="app-sidebar" aria-label="Navigazione principale">
+    <div class="app-sidebar__inner">
+      <div class="app-sidebar__brand">PanLink</div>
+      <nav class="app-sidebar__nav" aria-label="Sezioni pannello">
+        <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" aria-current="page" title="Elementi & Link">
+          <i class="fa-solid fa-address-book" aria-hidden="true"></i>
+          <span>Elementi & Link</span>
+        </a>
+        <a href="#section-assets" class="app-sidebar__link" data-nav-target="section-assets" title="Asset">
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          <span>Asset</span>
+        </a>
+        <a href="#section-notes" class="app-sidebar__link" data-nav-target="section-notes" title="Note & Appunti">
+          <i class="fa-solid fa-note-sticky" aria-hidden="true"></i>
+          <span>Note & Appunti</span>
+        </a>
+        <a href="#section-tasks" class="app-sidebar__link" data-nav-target="section-tasks" title="Attività">
+          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+          <span>Attività</span>
+        </a>
+        <a href="#section-appointments" class="app-sidebar__link" data-nav-target="section-appointments" title="Appuntamenti">
+          <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+          <span>Appuntamenti</span>
+        </a>
+      </nav>
+    </div>
+  </aside>
+  <!-- Main Container -->
+  <main class="container" role="main">
+    
+    <!-- Panel 1: Elementi -->
+    <section id="section-clients" class="panel" aria-labelledby="clients-title">
+      <div class="panel__header">
+        <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
+        <button id="expandClientsBtn" class="btn btn--icon" title="Espandi a schermo intero" aria-label="Expand clients panel">
+          <i class="expand-icon fa-solid fa-expand" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <!-- Search Box -->
+      <div class="form-group">
+        <label for="clientSearch" class="label">Cerca..</label>
+        <input 
+          type="text" 
+          id="clientSearch" 
+          class="input" 
+          placeholder="Digita nome o link..."
+          aria-label="Cerca..."
+        >
+      </div>
+
+      <!-- Add Client Form -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="clientName" class="label">Attributo</label>
+          <input 
+            type="text" 
+            id="clientName" 
+            class="input" 
+            placeholder="Es. Sito Web"
+          >
+        </div>
+        <div class="form-group">
+          <label for="clientLink" class="label">Link:</label>
+          <input 
+            type="url" 
+            id="clientLink" 
+            class="input" 
+            placeholder="https://www.esempio.com"
+          >
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button id="addClientBtn" class="btn btn--primary">
+          <i class="fa-solid fa-plus"></i> Aggiungi Elemento
+        </button>
+        <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
+          <i class="fa-solid fa-layer-group"></i> Crea Asset
+        </button>
+      </div>
+
+      <!-- Clients List -->
+      <div id="clientsList" class="clients-list" aria-live="polite" aria-label="Elenco elementi">
+        <!-- Clients rendered here -->
+      </div>
+
+      <div id="section-export" class="nav-anchor" aria-hidden="true"></div>
+      <!-- Export -->
+      <div class="action-row">
+        <button id="exportClientsBtn" class="btn btn--secondary btn--small">
+          <i class="fa-solid fa-download"></i> Esporta CSV
+        </button>
+      </div>
+    </section>
+
+    <!-- Panel 2: Asset Management -->
+    <aside id="section-assets" class="panel" aria-labelledby="assets-title">
+      <h2 id="assets-title" class="panel__title">Asset</h2>
+
+      <button id="createAssetBtnSide" data-create-asset-btn class="btn btn--primary btn--block" style="margin-bottom: var(--spacing-lg);">
+        <i class="fa-solid fa-layer-group"></i> Crea Asset
+      </button>
+
+      <div id="assetsList" class="assets-list" aria-live="polite" aria-label="Elenco asset">
+        <!-- Assets rendered here -->
+      </div>
+    </aside>
+      <div id="section-appointments" class="card" aria-labelledby="appts-subtitle">
+        <h3 id="appts-subtitle" class="card__title">Prossimi appuntamenti</h3>
+        
+        <div class="form-group">
+          <label for="apptDate" class="label">Data:</label>
+          <input type="date" id="apptDate" class="input">
+        </div>
+
+        <div class="form-group">
+          <label for="apptDesc" class="label">Descrizione:</label>
+          <input 
+            type="text" 
+            id="apptDesc" 
+            class="input" 
+            placeholder="Es. Riunione operativa"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="apptType" class="label">Tipo:</label>
+          <select id="apptType" class="input">
+            <option value="remote">Da remoto</option>
+            <option value="onsite">Onsite</option>
+          </select>
+        </div>
+
+        <button id="addApptBtn" class="btn btn--primary btn--small">
+          <i class="fa-solid fa-calendar-plus"></i> Aggiungi
+        </button>
+
+        <!-- Appointments Display -->
+        <div class="appts-columns">
+          <div class="appts-column">
+            <h4 class="appts-column__title">
+              <i class="fa-solid fa-video"></i> Da remoto
+            </h4>
+            <ul id="appointmentsRemote" class="appts-list" role="list">
+              <!-- Appointments rendered here -->
+            </ul>
+          </div>
+
+          <div class="appts-column">
+            <h4 class="appts-column__title">
+              <i class="fa-solid fa-location-dot"></i> Onsite
+            </h4>
+            <ul id="appointmentsOnsite" class="appts-list" role="list">
+              <!-- Appointments rendered here -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Panel 3: Notes & Tasks -->
+    <section id="section-notes" class="panel" aria-labelledby="notes-title">
+      <h2 id="notes-title" class="panel__title">Note & Attività</h2>
+
+      <!-- Notes Section -->
+      <fieldset class="fieldset">
+        <legend class="legend">Note</legend>
+        
+        <div class="form-group">
+          <textarea 
+            id="noteInput" 
+            class="input textarea" 
+            placeholder="Aggiungi una nota..."
+            aria-label="Testo della nota"
+          ></textarea>
+        </div>
+        
+        <button id="addNoteBtn" class="btn btn--primary btn--small">
+          <i class="fa-solid fa-note-sticky"></i> Aggiungi Nota
+        </button>
+
+        <ul id="notesList" class="notes-list" aria-live="polite" role="list">
+          <!-- Notes rendered here -->
+        </ul>
+
+        <div class="action-row">
+          <button id="exportNotesBtn" class="btn btn--secondary btn--small">
+            <i class="fa-solid fa-download"></i> Esporta Note
+          </button>
+        </div>
+      </fieldset>
+
+      <hr class="divider">
+
+      <!-- Tasks Section -->
+      <fieldset id="section-tasks" class="fieldset">
+        <legend class="legend">Attività</legend>
+        
+        <div class="form-group">
+          <label for="taskInput" class="label">Nuova attività:</label>
+          <div class="input-group">
+            <input 
+              type="text" 
+              id="taskInput" 
+              class="input" 
+              placeholder="Aggiungi una task..."
+              aria-label="Descrizione task"
+            >
+            <button id="addTaskBtn" class="btn btn--primary btn--small">
+              <i class="fa-solid fa-check-circle"></i> Aggiungi
+            </button>
+          </div>
+        </div>
+
+        <ul id="tasksList" class="tasks-list" aria-live="polite" role="list">
+          <!-- Tasks rendered here -->
+        </ul>
+      </fieldset>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__dialog">
+      <div class="modal__header">
+        <h3 id="modalTitle" class="modal__title">Modifica</h3>
+        <button class="btn btn--icon" data-modal-close aria-label="Chiudi modal" title="Chiudi (ESC)">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      <div id="modalBody" class="modal__body">
+        <!-- Content injected here -->
+      </div>
+      <div class="modal__footer">
+        <button id="modalCancel" class="btn btn--secondary">Annulla</button>
+        <button id="modalSave" class="btn btn--primary">Salva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

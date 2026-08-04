@@ -1,0 +1,156 @@
+:root{
+  /* Palette blu */
+  --bg: #eaf2ff;
+  --card: #ffffff;
+  --text: #0b2447;
+  --muted: #556b86;
+  --accent: #0b63ff;
+  --accent-2: #035bd6;
+  --danger: #e03a3a;
+  --radius: 10px;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+html.dark {
+  background: #07102a;
+  color: #e6eef8;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+.container{display:grid;grid-template-columns:1fr 320px 360px;gap:20px;padding:20px;max-width:1200px;margin:16px auto}
+@media (max-width:1000px){.container{grid-template-columns:1fr 340px;grid-auto-rows:min-content}.pannello3{order:3}}
+@media (max-width:700px){.container{grid-template-columns:1fr; padding:12px}aside{order:3}}
+
+/* Topbar centrata */
+.topbar{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  padding:18px 16px;
+  background:linear-gradient(90deg,#ffffff,#f3f5f7);
+  box-shadow:0 2px 8px rgba(16,24,40,0.04);
+  position:sticky;top:0;z-index:40;border-bottom:1px solid rgba(15,23,42,0.03)
+}
+.brand{text-align:center}
+.brand h1{margin:0;font-size:28px;font-weight:700}
+.brand .subtitle{margin:0;font-size:12px;color:var(--muted)}
+
+/* Controls */
+.controls{position:absolute;right:18px;top:14px}
+#dark-mode-toggle{background:transparent;border:none;padding:8px;border-radius:8px;cursor:pointer}
+.material-icons{vertical-align:middle;color:var(--muted)}
+
+/* Tool group spacing (Query / CRUD) */
+.tool-group{display:flex;flex-direction:column;gap:10px}
+.tool-group button{padding:10px 12px}
+
+/* Panels / cards */
+.pannello, .pannello2, .pannello3{
+  /* Card leggermente tinta azzurra per migliore distinzione */
+  background:linear-gradient(180deg, rgba(234,242,255,0.95), rgba(255,255,255,0.98));
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:0 8px 24px rgba(11,38,77,0.06);
+  min-height:120px;
+}
+
+/* Forms */
+.form-group{margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+input[type="text"],input[type="url"],textarea{
+  width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ee;background:#fff;font-size:14px
+}
+textarea{min-height:80px;resize:vertical}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Buttons */
+button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+button.secondary{background:transparent;color:var(--accent);border:1px solid rgba(37,99,235,0.12)}
+button.small{padding:8px 10px;font-size:13px}
+
+.lista-clienti{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:6px}
+.lista-clienti::-webkit-scrollbar{width:10px}
+.lista-clienti::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:10px}
+.lista-clienti{scrollbar-width:thin;scrollbar-color:var(--accent) transparent}
+.client-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:linear-gradient(90deg,#ffffff, rgba(234,242,255,0.6));box-shadow:0 1px 6px rgba(11,38,77,0.03)}
+.client-item a{color:var(--accent);text-decoration:none;font-weight:600}
+.client-actions button{background:transparent;border:none;color:var(--muted);cursor:pointer;margin-left:8px}
+
+.client-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.client-badges .badge{padding:4px 8px;border-radius:999px;background:rgba(11,99,255,0.06);color:var(--accent);font-size:12px;font-weight:600}
+
+/* Appointments card */
+.card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 1px 6px rgba(16,24,40,0.04);margin-top:12px}
+.appointments h3{margin:0 0 8px 0}
+.appt-columns{display:flex;gap:12px}
+.appt-list{list-style:none;padding:0;margin:0;font-size:13px;color:var(--text)}
+.appt-list li{padding:6px 0;border-bottom:1px dashed #f0f2f5}
+
+/* Appointment form */
+.appt-form{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.appt-form input[type="text"], .appt-form input[type="date"], .appt-form select{padding:8px;border-radius:8px;border:1px solid #e6e9ee}
+.appt-form button{align-self:flex-start}
+
+/* Notes */
+.note-list{list-style:none;padding:0;margin-top:12px}
+.note-list li{display:flex;align-items:center;justify-content:space-between;background:var(--card);padding:10px;border-radius:8px;box-shadow:0 1px 3px rgba(16,24,40,0.03)}
+.delete-note{background:transparent;border:none;cursor:pointer}
+
+/* Generated link */
+.generated{margin-top:10px;padding:10px;border-radius:8px;background:#fff;border:1px solid #eef2ff}
+.generated-link{color:var(--accent)}
+
+/* Placeholder font (nicer) */
+input::placeholder, textarea::placeholder { font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; font-style: normal; color: #8a97b3 }
+
+/* Export button inside notes card */
+.notes-export{margin-top:10px}
+
+/* Font Awesome tweaks: use currentColor so icons inherit text color */
+.fa-solid, .fa-regular, .fa-brands { font-size: 16px; vertical-align: middle; color: inherit; }
+
+/* Attività styles */
+.attivita{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(11,38,77,0.06)}
+.attivita h3{margin:0 0 8px 0;font-size:14px}
+.attivita-form{display:flex;gap:8px;margin-bottom:8px}
+.attivita-form input{flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ee}
+.attivita-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.attivita-list li{display:flex;gap:8px;align-items:center;background:var(--card);padding:8px;border-radius:8px;box-shadow:0 1px 3px rgba(11,38,77,0.03)}
+.attivita-list li .fa-check{color:green}
+.attivita-list li .fa-trash{color:var(--danger)}
+
+/* Hover zoom for interactive items */
+.client-item, .att-item, .note-list li{
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.client-item:hover, .att-item:hover, .note-list li:hover{
+  transform: scale(1.02);
+  box-shadow:0 10px 30px rgba(11,38,77,0.09);
+}
+
+/* Modal styles */
+.modal{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center}
+.modal[aria-hidden="false"], .modal.show{display:flex}
+.modal-backdrop{position:absolute;inset:0;background:rgba(4,8,20,0.5)}
+.modal-dialog{position:relative;background:var(--card);border-radius:10px;max-width:560px;width:94%;padding:16px;box-shadow:0 20px 60px rgba(2,6,23,0.4);transform-origin:center}
+.modal-header h3{margin:0;font-size:18px}
+.modal-body{margin-top:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.modal .small{min-width:84px}
+
+/* Ensure modal looks good in dark mode */
+.dark .modal-dialog{background:#081427;color:#e6eef8}
+
+/* Dark mode */
+.dark{background:#07102a;color:#e6eef8}
+.dark .pannello, .dark .pannello2, .dark .pannello3{background:linear-gradient(180deg,#071022,#08142a)}
+.dark input, .dark textarea{background:#081427;color:#dbeafe;border:1px solid rgba(255,255,255,0.04);color:#e6eef8}
+.dark .material-icons{color:#cfe0ff}
+
+
+
+
