@@ -28,8 +28,8 @@ cd Panel-main && python3 -m http.server 8000
 Non esistono test automatici, linter o CI. La verifica è **manuale nel browser**:
 flussi CRUD, persistenza dopo refresh, dark mode, responsive sidebar, console senza errori.
 
-> Nota: font e icone sono caricati da CDN (Google Fonts, Font Awesome). Con l'app aperta
-> offline via `file://` le icone/font di fallback restano ma i CDN non caricano.
+> Nota: font (Inter) e icone (Font Awesome) sono **vendorizzati in locale** sotto
+> `Panel-main/vendor/` — nessun CDN, l'app funziona completamente offline via `file://`.
 
 ## Struttura file
 
@@ -39,6 +39,10 @@ Panel-main/
 ├── style.css           # Design system completo con CSS custom properties
 ├── app.js              # Tutta la logica applicativa (moduli come object literal)
 ├── favicon.svg
+│
+├── vendor/             # Asset locali (offline, nessun CDN)
+│   ├── fontawesome/    # Font Awesome (solo fa-solid) — CSS + woff2
+│   └── inter/          # Font Inter (pesi 300-700) — inter.css + woff2
 │
 ├── index-old.html      # Backup versione precedente (NON usare/modificare)
 ├── style-old.css       # Backup versione precedente
@@ -140,8 +144,9 @@ Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
   quindi non memorizzarli all'apertura.
 - La lista elementi va ridisegnata con `UI.refreshClients()` (non `DOM.renderClients()`
   nudo) così il **filtro di ricerca attivo** viene preservato dopo add/edit/delete.
-- Font e icone sono su CDN (Font Awesome, Google Fonts): offline via `file://` non
-  caricano. È l'unico "fallimento" atteso nei test headless.
+- Font e icone sono vendorizzati in `vendor/` (nessun CDN): l'app funziona offline.
+  Se si aggiunge un'icona, usare una classe `fa-solid` già coperta dal woff2
+  incluso (solo il set *solid* è vendorizzato; niente brands/regular).
 
 ## Git / workflow
 

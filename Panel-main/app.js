@@ -1731,17 +1731,27 @@ const UI = {
     const toggle = document.getElementById('darkModeToggle');
     const html = document.documentElement;
 
+    // Icona luna (tema chiaro) / sole (tema scuro)
+    const setDarkIcon = (dark) => {
+      const icon = toggle?.querySelector('i');
+      if (!icon) return;
+      icon.classList.toggle('fa-moon', !dark);
+      icon.classList.toggle('fa-sun', dark);
+    };
+
     // Load saved preference
     const isDark = Storage.get(Storage.keys.darkMode) === 'true';
     if (isDark) {
       html.classList.add('dark');
       toggle?.setAttribute('aria-pressed', 'true');
     }
+    setDarkIcon(isDark);
 
     toggle?.addEventListener('click', () => {
-      const isDark = html.classList.toggle('dark');
-      toggle.setAttribute('aria-pressed', isDark);
-      Storage.set(Storage.keys.darkMode, isDark ? 'true' : 'false');
+      const dark = html.classList.toggle('dark');
+      toggle.setAttribute('aria-pressed', dark);
+      setDarkIcon(dark);
+      Storage.set(Storage.keys.darkMode, dark ? 'true' : 'false');
     });
   }
 };

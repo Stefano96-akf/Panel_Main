@@ -7,12 +7,9 @@
   <title>PanLink</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Fonts & icone: vendorizzati in locale (nessun CDN) → funziona offline -->
+  <link rel="stylesheet" href="vendor/inter/inter.css">
+  <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -72,14 +69,14 @@
         <button id="sidebarToggle" class="btn btn--icon sidebar-toggle" aria-label="Apri menu navigazione" aria-controls="appSidebar" aria-expanded="false" title="Menu">
           <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
-        <button 
-          id="darkModeToggle" 
-          class="btn btn--icon" 
-          aria-pressed="false" 
+        <button
+          id="darkModeToggle"
+          class="btn btn--icon"
+          aria-pressed="false"
           title="Attiva/Disattiva modalità scura"
           aria-label="Toggle dark mode"
         >
-          <span class="material-icons">dark_mode</span>
+          <i class="fa-solid fa-moon" aria-hidden="true"></i>
         </button>
       </div>
     </div>
