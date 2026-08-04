@@ -2098,3 +2098,10 @@ html.dark .kanban__list.is-over {
   background: rgba(59, 130, 246, 0.15);
 }
 
+/* Elemento con link non valido / non sicuro: nome non cliccabile */
+.client-item__name--unsafe {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+

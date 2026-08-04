@@ -24,6 +24,8 @@ const Storage = {
     appointments: 'panel_appointments',
     assets: 'panel_assets',
     darkMode: 'panel_dark_mode',
+    layoutExpanded: 'panel_layout_expanded',
+    sidebarCollapsed: 'panlink_sidebar_collapsed',
   },
 
   get(key, defaultValue = []) {
@@ -75,10 +77,13 @@ const Validators = {
     return value && value.trim().length > 0;
   },
 
+  // Accetta SOLO http/https: new URL() da solo considera valido anche
+  // `javascript:`, `data:`, `vbscript:` → potenziale XSS quando il valore
+  // finisce in un attributo href.
   isValidUrl(url) {
     try {
-      new URL(url);
-      return true;
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
       return false;
     }
@@ -96,7 +101,7 @@ const Validators = {
       return { valid: false, error: 'Link richiesto' };
     }
     if (!Validators.isValidUrl(link)) {
-      return { valid: false, error: 'Link non valido' };
+      return { valid: false, error: 'Il link deve iniziare con http:// o https://' };
     }
     return { valid: true };
   },
@@ -129,6 +134,18 @@ const Utils = {
       "'": '&#039;'
     };
     return String(text || '').replace(/[&<>"']/g, m => map[m]);
+  },
+
+  // Ritorna l'URL solo se ha schema http/https, altrimenti stringa vuota.
+  // Difesa in profondità per link `javascript:`/`data:` eventualmente già
+  // presenti in localStorage (salvati prima della validazione più stretta).
+  safeUrl(url) {
+    try {
+      const parsed = new URL(url);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? url : '';
+    } catch {
+      return '';
+    }
   },
 
   generateId() {
@@ -165,18 +182,6 @@ const Utils = {
     } catch {
       return isoString;
     }
-  },
-
-  generateEntityLink(entityName) {
-    const baseUrl = 'https://';
-    const domain = '.example.com';
-    const path = '/Appalti/InitLogin.do';
-    const slug = entityName
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9\-]/g, '');
-    return `${baseUrl}${slug}${domain}${path}`;
   },
 
   csvEscape(value) {
@@ -797,17 +802,28 @@ const Modal = {
     }
   },
 
-  setupFocusTrap() {
-    const focusableElements = Modal.element.querySelectorAll(
+  // Elementi focusabili calcolati ON DEMAND: il contenuto della modale può
+  // essere iniettato DOPO l'apertura (es. le checkbox asset), quindi non va
+  // memorizzato al momento dell'open. Esclude elementi disabilitati o nascosti.
+  getFocusable() {
+    const nodes = Modal.element.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    return Array.from(nodes).filter(el =>
+      !el.disabled && el.offsetParent !== null && el.getAttribute('aria-hidden') !== 'true'
+    );
+  },
 
+  setupFocusTrap() {
     const focusTrapHandler = (e) => {
       if (e.key !== 'Tab') return;
+      const focusable = Modal.getFocusable();
+      if (focusable.length === 0) return;
+      const firstElement = focusable[0];
+      const lastElement = focusable[focusable.length - 1];
+
       if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
+        if (document.activeElement === firstElement || !Modal.element.contains(document.activeElement)) {
           e.preventDefault();
           lastElement.focus();
         }
@@ -842,7 +858,6 @@ const DOM = {
   appointmentsRemote: document.getElementById('appointmentsRemote'),
   appointmentsOnsite: document.getElementById('appointmentsOnsite'),
   clientSearch: document.getElementById('clientSearch'),
-  generatedLink: document.getElementById('generatedLink'),
 
   // Clients rendering
   renderClients(clients = null) {
@@ -874,20 +889,27 @@ const DOM = {
         ${Assets.getByIds(client.assets).map(asset => `<span class="asset-badge">${Utils.escapeHtml(asset.name)}</span>`).join('')}
       </div>
     ` : '';
+    const safeLink = Utils.safeUrl(client.link);
+    const nameCell = safeLink
+      ? `<a href="${Utils.escapeHtml(safeLink)}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="client-item__name">
+          ${Utils.escapeHtml(client.nome)}
+        </a>`
+      : `<span class="client-item__name client-item__name--unsafe"
+             title="Link non valido o non sicuro">
+          ${Utils.escapeHtml(client.nome)}
+        </span>`;
     div.innerHTML = `
       <div class="client-item__info">
-        <a href="${Utils.escapeHtml(client.link)}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="client-item__name">
-          ${Utils.escapeHtml(client.nome)}
-        </a>
+        ${nameCell}
         <div class="client-item__date">${Utils.formatDate(client.createdAt)}</div>
         ${assetBadgesHtml}
       </div>
       <div class="client-item__actions">
         <button class="client-item__action-btn" title="Apri link"
-                onclick="window.open('${Utils.escapeHtml(client.link)}', '_blank')">
+                data-open-client="${client.id}" ${safeLink ? '' : 'disabled'}>
           <i class="fa-solid fa-up-right-from-square"></i>
         </button>
         <button class="client-item__action-btn" title="Modifica"
@@ -1089,25 +1111,39 @@ const UI = {
     UI.setupDarkModeHandler();
   },
 
+  // Ridisegna la lista elementi rispettando il filtro di ricerca attivo,
+  // così add/edit/delete non azzerano la ricerca corrente.
+  refreshClients() {
+    const query = (DOM.clientSearch?.value || '').trim();
+    DOM.renderClients(query ? Clients.search(query) : null);
+  },
+
   setupClientHandlers() {
     const addBtn = document.getElementById('addClientBtn');
     const searchInput = DOM.clientSearch;
 
     addBtn?.addEventListener('click', () => UI.handleAddClient());
-    
+
     // Debounced search
-    searchInput?.addEventListener('input', 
-      Utils.debounce(() => {
-        const query = searchInput.value;
-        const results = Clients.search(query);
-        DOM.renderClients(results);
-      }, 300)
+    searchInput?.addEventListener('input',
+      Utils.debounce(() => UI.refreshClients(), 300)
     );
 
     // Event delegation for client actions
     DOM.clientsList.addEventListener('click', (e) => {
+      const openBtn = e.target.closest('[data-open-client]');
       const deleteBtn = e.target.closest('[data-delete-client]');
       const editBtn = e.target.closest('[data-edit-client]');
+
+      if (openBtn) {
+        const client = Clients.getAll().find(c => c.id === openBtn.dataset.openClient);
+        const safe = client ? Utils.safeUrl(client.link) : '';
+        if (safe) {
+          window.open(safe, '_blank', 'noopener,noreferrer');
+        } else {
+          Toast.warning('Link non valido o non sicuro');
+        }
+      }
 
       if (deleteBtn) {
         const clientId = deleteBtn.dataset.deleteClient;
@@ -1168,7 +1204,7 @@ const UI = {
       }
 
       DOM.renderAssets();
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Asset creato con successo');
       return true;
     });
@@ -1206,7 +1242,7 @@ const UI = {
       }
 
       DOM.renderAssets();
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Asset aggiornato');
       return true;
     });
@@ -1218,50 +1254,10 @@ const UI = {
       message: `Confermi l'eliminazione dell'asset "${asset?.name || 'selezionato'}"? L'asset verra rimosso anche da tutti gli elementi associati.`,
       onConfirm: () => {
         Assets.delete(assetId);
-        DOM.renderClients();
+        UI.refreshClients();
         DOM.renderAssets();
         Toast.success('Asset eliminato');
       }
-    });
-  },
-
-  handleViewAsset(assetId) {
-    const asset = Assets.getById(assetId);
-    if (!asset) return;
-
-    const clientsWithAsset = Clients.getAll().filter(c => 
-      (c.assets || []).includes(assetId)
-    );
-
-    const clientsList = clientsWithAsset.length > 0 
-      ? clientsWithAsset.map(c => `<li>${Utils.escapeHtml(c.nome)}</li>`).join('')
-      : '<li style="color: var(--color-text-muted); font-style: italic;">Nessun elemento associato</li>';
-
-    const content = `
-      <div class="form-group">
-        <label class="label">Nome:</label>
-        <p style="padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0; color: var(--color-text-primary);">
-          ${Utils.escapeHtml(asset.name)}
-        </p>
-      </div>
-      ${asset.description ? `
-        <div class="form-group">
-          <label class="label">Descrizione:</label>
-          <p style="padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0; color: var(--color-text-primary);">
-            ${Utils.escapeHtml(asset.description)}
-          </p>
-        </div>
-      ` : ''}
-      <div class="form-group">
-        <label class="label">Elementi associati:</label>
-        <ul style="list-style: none; padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0;">
-          ${clientsList}
-        </ul>
-      </div>
-    `;
-
-    Modal.open(`Asset: ${asset.name}`, content, () => {
-      // View only - callback does nothing, modal closes on button click
     });
   },
 
@@ -1301,7 +1297,7 @@ const UI = {
       Clients.add(nome, link, selectedAssets);
       nameInput.value = '';
       linkInput.value = '';
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Elemento aggiunto con asset associati');
       return true;
     });
@@ -1341,7 +1337,7 @@ const UI = {
       }
 
       Clients.update(clientId, nome, link, selectedAssets);
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Elemento aggiornato');
       return true;
     });
@@ -1356,7 +1352,7 @@ const UI = {
       message: `Confermi l'eliminazione dell'elemento "${client?.nome || 'selezionato'}"?`,
       onConfirm: () => {
         Clients.delete(clientId);
-        DOM.renderClients();
+        UI.refreshClients();
         Toast.success('Elemento eliminato');
       }
     });
@@ -1718,7 +1714,7 @@ const UI = {
     };
 
     // Load saved preference
-    const isExpanded = Storage.get('panel_layout_expanded') === 'true';
+    const isExpanded = Storage.get(Storage.keys.layoutExpanded) === 'true';
     if (isExpanded) {
       container?.classList.add('layout-expanded');
       setExpandIcon(isExpanded);
@@ -1727,7 +1723,7 @@ const UI = {
     expandBtn?.addEventListener('click', () => {
       const expanded = container?.classList.toggle('layout-expanded');
       setExpandIcon(!!expanded);
-      Storage.set('panel_layout_expanded', expanded ? 'true' : 'false');
+      Storage.set(Storage.keys.layoutExpanded, expanded ? 'true' : 'false');
     });
   },
 
@@ -1754,7 +1750,7 @@ const UI = {
 // SIDEBAR NAV MODULE - Vertical navigation with accessibility
 // ============================================================================
 const SidebarNav = {
-  keyCollapsed: 'panlink_sidebar_collapsed',
+  keyCollapsed: Storage.keys.sidebarCollapsed,
   elements: {
     sidebar: null,
     toggle: null,
@@ -1895,15 +1891,6 @@ document.addEventListener('DOMContentLoaded', () => {
   Modal.init();
   UI.init();
   SidebarNav.init();
-});
-
-// External tools
-document.getElementById('openQueryBtn')?.addEventListener('click', () => {
-  window.open('https://eproc-academy.example.com/Appalti/Query.do', '_blank');
-});
-
-document.getElementById('openCrudBtn')?.addEventListener('click', () => {
-  window.open('https://eproc-academy.example.com/Appalti/CRUD.do', '_blank');
 });
 
 

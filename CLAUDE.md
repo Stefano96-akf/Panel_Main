@@ -128,14 +128,20 @@ Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
 
 ## Sicurezza / gotcha da conoscere
 
-- L'output HTML è escapato con `Utils.escapeHtml`, ma i **link** dei clienti finiscono
-  in `href` e in un `onclick` inline: `new URL()` considera valido anche `javascript:`,
-  quindi valori del genere sono un potenziale vettore XSS. Preferire validazione dello
-  schema (`http/https`) e drop dell'`onclick` inline in favore della delega eventi.
-- La modale chiude se il callback non ritorna `false` (vedi sopra): attenzione nei
-  path di validazione.
-- La ricerca clienti fa re-render filtrato, ma add/edit/delete chiamano
-  `DOM.renderClients()` senza argomenti → il filtro attivo viene perso al primo update.
+- L'output HTML è escapato con `Utils.escapeHtml`. I **link** vengono inoltre filtrati
+  per schema: `Validators.isValidUrl` e `Utils.safeUrl` accettano solo `http/https`
+  (bloccano `javascript:`/`data:`). Non reintrodurre `onclick` inline: l'apertura link
+  passa per la delega eventi (`data-open-client`). `safeUrl` va usato ogni volta che un
+  URL utente finisce in un `href`, come difesa per record vecchi già in `localStorage`.
+- La modale chiude se il callback non ritorna `false`: nei path di validazione fallita
+  **ritornare sempre `false`** per tenerla aperta (vedi convenzione modale sopra).
+- Il contenuto della modale può essere iniettato **dopo** `Modal.open` (es. checkbox
+  asset): il focus-trap calcola gli elementi focusabili on-demand via `Modal.getFocusable()`,
+  quindi non memorizzarli all'apertura.
+- La lista elementi va ridisegnata con `UI.refreshClients()` (non `DOM.renderClients()`
+  nudo) così il **filtro di ricerca attivo** viene preservato dopo add/edit/delete.
+- Font e icone sono su CDN (Font Awesome, Google Fonts): offline via `file://` non
+  caricano. È l'unico "fallimento" atteso nei test headless.
 
 ## Git / workflow
 
