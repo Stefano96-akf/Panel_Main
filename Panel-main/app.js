@@ -481,22 +481,41 @@ const Notes = {
 // TASKS MODULE - Task management
 // ============================================================================
 const Tasks = {
+  // Colonne della bacheca Kanban, in ordine
+  statuses: ['todo', 'doing', 'done'],
+
+  // Normalizza un task garantendo `status` e mantenendo `completed` sincronizzato
+  // per retro-compatibilita con i record salvati prima della bacheca.
+  normalize(task = {}) {
+    const status = Tasks.statuses.includes(task.status)
+      ? task.status
+      : (task.completed ? 'done' : 'todo');
+    return {
+      ...task,
+      id: task.id || Utils.generateId(),
+      text: task.text || '',
+      status,
+      completed: status === 'done',
+      createdAt: task.createdAt || new Date().toISOString()
+    };
+  },
+
   getAll() {
-    return Storage.get(Storage.keys.tasks, []);
+    return Storage.get(Storage.keys.tasks, []).map(Tasks.normalize);
   },
 
   save(tasksList) {
-    return Storage.set(Storage.keys.tasks, tasksList);
+    return Storage.set(Storage.keys.tasks, tasksList.map(Tasks.normalize));
   },
 
-  add(text) {
+  add(text, status = 'todo') {
     const tasks = Tasks.getAll();
-    const newTask = {
+    const newTask = Tasks.normalize({
       id: Utils.generateId(),
       text,
-      completed: false,
+      status,
       createdAt: new Date().toISOString()
-    };
+    });
     tasks.unshift(newTask);
     Tasks.save(tasks);
     return newTask;
@@ -506,10 +525,39 @@ const Tasks = {
     const tasks = Tasks.getAll();
     const task = tasks.find(t => t.id === id);
     if (task) {
-      task.completed = !task.completed;
+      task.status = task.status === 'done' ? 'todo' : 'done';
+      task.completed = task.status === 'done';
       Tasks.save(tasks);
     }
     return true;
+  },
+
+  // Sposta un task in una colonna della bacheca
+  setStatus(id, status) {
+    if (!Tasks.statuses.includes(status)) return false;
+    const tasks = Tasks.getAll();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return false;
+    if (task.status === status) return false;
+    task.status = status;
+    task.completed = status === 'done';
+    Tasks.save(tasks);
+    return true;
+  },
+
+  // Sposta un task alla colonna adiacente (dir = -1 sinistra, +1 destra)
+  moveByOffset(id, dir) {
+    const tasks = Tasks.getAll();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return false;
+    const current = Tasks.statuses.indexOf(task.status);
+    const next = current + dir;
+    if (next < 0 || next >= Tasks.statuses.length) return false;
+    return Tasks.setStatus(id, Tasks.statuses[next]);
+  },
+
+  getByStatus(status) {
+    return Tasks.getAll().filter(t => t.status === status);
   },
 
   delete(id) {
@@ -721,11 +769,14 @@ const Modal = {
       Modal.escapeHandler = null;
     }
 
-    // Restore previous focus
-    if (Modal.previousActiveElement && typeof Modal.previousActiveElement.focus === 'function') {
-      setTimeout(() => Modal.previousActiveElement.focus(), 100);
-    }
+    // Restore previous focus.
+    // Cattura l'elemento in una variabile locale PRIMA di azzerare la proprietà:
+    // il setTimeout è asincrono e leggerebbe altrimenti un valore già null.
+    const toFocus = Modal.previousActiveElement;
     Modal.previousActiveElement = null;
+    if (toFocus && typeof toFocus.focus === 'function') {
+      setTimeout(() => toFocus.focus(), 100);
+    }
   },
 
   isOpen() {
@@ -883,7 +934,7 @@ const DOM = {
     });
   },
 
-  // Tasks rendering
+  // Tasks rendering (lista semplice). Aggiorna sempre anche la bacheca Kanban.
   renderTasks() {
     const tasks = Tasks.getAll();
     DOM.tasksList.innerHTML = '';
@@ -894,28 +945,91 @@ const DOM = {
           <p>Nessuna attività ancora</p>
         </div>
       `;
-      return;
+    } else {
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = `task-item ${task.completed ? 'task-item--completed' : ''}`;
+        li.innerHTML = `
+          <input type="checkbox"  class="task-item__checkbox"
+                 data-toggle-task="${task.id}"
+                 ${task.completed ? 'checked' : ''}>
+          <span class="task-item__text">${Utils.escapeHtml(task.text)}</span>
+          <div class="task-item__actions">
+            <button class="task-item__action-btn" title="Modifica" data-edit-task="${task.id}">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="task-item__action-btn task-item__action-btn--delete"
+                    title="Elimina" data-delete-task="${task.id}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        DOM.tasksList.appendChild(li);
+      });
     }
 
-    tasks.forEach(task => {
-      const li = document.createElement('li');
-      li.className = `task-item ${task.completed ? 'task-item--completed' : ''}`;
-      li.innerHTML = `
-        <input type="checkbox"  class="task-item__checkbox" 
-               data-toggle-task="${task.id}" 
-               ${task.completed ? 'checked' : ''}>
-        <span class="task-item__text">${Utils.escapeHtml(task.text)}</span>
-        <div class="task-item__actions">
-          <button class="task-item__action-btn" title="Modifica" data-edit-task="${task.id}">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="task-item__action-btn task-item__action-btn--delete" 
-                  title="Elimina" data-delete-task="${task.id}">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
-      `;
-      DOM.tasksList.appendChild(li);
+    DOM.renderBoard();
+  },
+
+  // Etichette e stile per colonna della bacheca
+  boardMeta: {
+    todo:  { label: 'Da fare',    icon: 'fa-list-ul' },
+    doing: { label: 'In corso',   icon: 'fa-spinner' },
+    done:  { label: 'Completato', icon: 'fa-circle-check' }
+  },
+
+  // Kanban board rendering — ripopola solo le liste interne (le dropzone e i
+  // relativi handler delegati restano vivi tra un render e l'altro).
+  renderBoard() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+
+    const statusIndex = { todo: 0, doing: 1, done: 2 };
+
+    Tasks.statuses.forEach(status => {
+      const zone = board.querySelector(`[data-dropzone="${status}"]`);
+      const countEl = board.querySelector(`[data-count="${status}"]`);
+      if (!zone) return;
+
+      const items = Tasks.getByStatus(status);
+      if (countEl) countEl.textContent = items.length;
+
+      if (items.length === 0) {
+        zone.innerHTML = `<div class="kanban__empty">Trascina qui una card</div>`;
+        return;
+      }
+
+      const idx = statusIndex[status];
+      zone.innerHTML = items.map(task => {
+        const canPrev = idx > 0;
+        const canNext = idx < Tasks.statuses.length - 1;
+        return `
+          <article class="kanban-card kanban-card--${status}" draggable="true"
+                   data-task-id="${task.id}" tabindex="0"
+                   aria-label="${Utils.escapeHtml(task.text)}">
+            <div class="kanban-card__text">${Utils.escapeHtml(task.text)}</div>
+            <div class="kanban-card__footer">
+              <span class="kanban-card__date">${Utils.formatDateShort(task.createdAt)}</span>
+              <div class="kanban-card__actions">
+                <button class="kanban-card__btn" title="Sposta a sinistra"
+                        data-board-move="-1" data-task-id="${task.id}" ${canPrev ? '' : 'disabled'}>
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button class="kanban-card__btn" title="Sposta a destra"
+                        data-board-move="1" data-task-id="${task.id}" ${canNext ? '' : 'disabled'}>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button class="kanban-card__btn" title="Modifica" data-edit-task="${task.id}">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="kanban-card__btn kanban-card__btn--delete" title="Elimina" data-delete-task="${task.id}">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
     });
   },
 
@@ -968,6 +1082,7 @@ const UI = {
     UI.setupAssetHandlers();
     UI.setupNoteHandlers();
     UI.setupTaskHandlers();
+    UI.setupBoardHandlers();
     UI.setupAppointmentHandlers();
     UI.setupExportHandlers();
     UI.setupExpandHandler();
@@ -1366,12 +1481,13 @@ const UI = {
       const validation = Validators.validateTask(text);
       if (!validation.valid) {
         Toast.error(validation.error);
-        return;
+        return false; // mantiene aperta la modale su input non valido
       }
 
       Tasks.update(taskId, text);
       DOM.renderTasks();
       Toast.success('Task aggiornata');
+      return true;
     });
   },
 
@@ -1383,6 +1499,106 @@ const UI = {
         Tasks.delete(taskId);
         DOM.renderTasks();
         Toast.success('Task eliminata');
+      }
+    });
+  },
+
+  // ---- Kanban board (bacheca stile Trello) ----
+  setupBoardHandlers() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+
+    const input = document.getElementById('boardTaskInput');
+    const addBtn = document.getElementById('boardAddTaskBtn');
+
+    const addFromInput = () => {
+      if (!input) return;
+      const validation = Validators.validateTask(input.value);
+      if (!validation.valid) {
+        Toast.error(validation.error);
+        return;
+      }
+      Tasks.add(input.value.trim(), 'todo');
+      input.value = '';
+      DOM.renderTasks();
+      Toast.success('Attività aggiunta');
+    };
+
+    addBtn?.addEventListener('click', addFromInput);
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addFromInput();
+    });
+
+    // Click delegato: sposta / modifica / elimina (edit e delete riusano gli handler task)
+    board.addEventListener('click', (e) => {
+      const moveBtn = e.target.closest('[data-board-move]');
+      const editBtn = e.target.closest('[data-edit-task]');
+      const deleteBtn = e.target.closest('[data-delete-task]');
+
+      if (moveBtn) {
+        const dir = parseInt(moveBtn.dataset.boardMove, 10);
+        if (Tasks.moveByOffset(moveBtn.dataset.taskId, dir)) {
+          DOM.renderTasks();
+        }
+        return;
+      }
+      if (editBtn) { UI.handleEditTask(editBtn.dataset.editTask); return; }
+      if (deleteBtn) { UI.handleDeleteTask(deleteBtn.dataset.deleteTask); }
+    });
+
+    // Tastiera: frecce ← / → spostano la card focalizzata
+    board.addEventListener('keydown', (e) => {
+      const card = e.target.closest('.kanban-card');
+      if (!card) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        if (Tasks.moveByOffset(card.dataset.taskId, dir)) DOM.renderTasks();
+      }
+    });
+
+    // ---- Drag & Drop (delegato sul contenitore, sopravvive ai re-render) ----
+    let draggingId = null;
+
+    board.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.kanban-card');
+      if (!card) return;
+      draggingId = card.dataset.taskId;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggingId);
+    });
+
+    board.addEventListener('dragend', (e) => {
+      e.target.closest('.kanban-card')?.classList.remove('is-dragging');
+      board.querySelectorAll('.kanban__list.is-over')
+        .forEach(el => el.classList.remove('is-over'));
+      draggingId = null;
+    });
+
+    board.addEventListener('dragover', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (!zone) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('is-over');
+    });
+
+    board.addEventListener('dragleave', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (zone && !zone.contains(e.relatedTarget)) {
+        zone.classList.remove('is-over');
+      }
+    });
+
+    board.addEventListener('drop', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.remove('is-over');
+      const id = draggingId || e.dataTransfer.getData('text/plain');
+      if (id && Tasks.setStatus(id, zone.dataset.dropzone)) {
+        DOM.renderTasks();
       }
     });
   },

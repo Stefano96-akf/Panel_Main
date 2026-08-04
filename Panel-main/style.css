@@ -1835,3 +1835,266 @@ html.dark .app-sidebar__link[aria-current="page"] {
   font-weight: var(--font-weight-medium);
 }
 
+/* ============================================================================
+   KANBAN BOARD (Bacheca stile Trello)
+   ============================================================================ */
+
+/* La bacheca occupa l'intera larghezza sotto gli altri pannelli */
+.panel--board {
+  grid-column: 1 / -1;
+}
+
+/* In modalità "espandi elementi" la bacheca si nasconde come il pannello note */
+.container.layout-expanded .panel--board {
+  display: none;
+}
+
+.panel__header--board {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.panel__header--board .panel__title {
+  margin-bottom: var(--spacing-xs);
+}
+
+.board__hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.board__add {
+  margin-bottom: var(--spacing-xl);
+}
+
+/* Griglia colonne */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+.kanban__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  min-height: 120px;
+}
+
+.kanban__column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kanban__column-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.kanban__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+.kanban__dot--todo  { background: var(--color-text-muted); }
+.kanban__dot--doing { background: var(--color-warning); }
+.kanban__dot--done  { background: var(--color-success); }
+
+.kanban__count {
+  min-width: 22px;
+  padding: 2px var(--spacing-sm);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dropzone */
+.kanban__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 60px;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-fast) var(--ease-in-out),
+              box-shadow var(--duration-fast) var(--ease-in-out);
+}
+
+.kanban__list.is-over {
+  background: var(--color-primary-light);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.kanban__empty {
+  padding: var(--spacing-lg) var(--spacing-md);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* Card */
+.kanban-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-text-muted);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-xs);
+  cursor: grab;
+  transition: transform var(--duration-fast) var(--ease-in-out),
+              box-shadow var(--duration-fast) var(--ease-in-out),
+              border-color var(--duration-fast) var(--ease-in-out);
+}
+
+.kanban-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.kanban-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.kanban-card--doing { border-left-color: var(--color-warning); }
+.kanban-card--done  { border-left-color: var(--color-success); }
+
+.kanban-card.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: rotate(1.5deg);
+}
+
+.kanban-card--done .kanban-card__text {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.kanban-card__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  word-break: break-word;
+  line-height: var(--line-height);
+}
+
+.kanban-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.kanban-card__date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.kanban-card__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-in-out);
+}
+
+.kanban-card:hover .kanban-card__actions,
+.kanban-card:focus-within .kanban-card__actions {
+  opacity: 1;
+}
+
+.kanban-card__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  transition: background-color var(--duration-fast) var(--ease-in-out),
+              color var(--duration-fast) var(--ease-in-out);
+}
+
+.kanban-card__btn:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.kanban-card__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.kanban-card__btn--delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+}
+
+/* Touch / assenza hover: azioni e frecce sempre visibili */
+@media (hover: none) {
+  .kanban-card__actions { opacity: 1; }
+}
+
+/* Responsive: colonne scrollabili in orizzontale su schermi stretti */
+@media (max-width: 768px) {
+  .kanban {
+    grid-auto-flow: column;
+    grid-auto-columns: 82%;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--spacing-sm);
+  }
+  .kanban__column {
+    scroll-snap-align: start;
+  }
+}
+
+/* Dark mode: colonne leggermente più profonde delle card */
+html.dark .kanban__column {
+  background: rgba(15, 23, 42, 0.5);
+}
+html.dark .kanban__count {
+  background: var(--color-bg-secondary);
+}
+html.dark .kanban__list.is-over {
+  background: rgba(59, 130, 246, 0.15);
+}
+
