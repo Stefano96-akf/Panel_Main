@@ -1,5 +1,10 @@
 # 📊 PANEL - ARCHITETTURA MODERNIZZATA
 
+> **Nota:** questo documento è un report storico della modernizzazione v2.0.
+> Alcuni numeri (conteggi righe) e affermazioni non sono più aggiornati.
+> Per lo stato **corrente** del codice fare riferimento a **`../CLAUDE.md`** e alla
+> sezione "Aggiornamenti recenti" in fondo a questo file.
+
 ## 🎯 Panoramica
 
 Pannello web 100% client-side modernizzato con:
@@ -17,8 +22,11 @@ Pannello web 100% client-side modernizzato con:
 ```
 Panel-main/
 ├── index.html          ← Markup semantico, ARIA roles, form accessibili
-├── style.css           ← Design system completo (1045 righe)
-├── app.js              ← Architettura modulare (880 righe)
+├── style.css           ← Design system completo
+├── app.js              ← Architettura modulare (object literal)
+├── favicon.svg
+│
+├── vendor/             ← Font Awesome + Inter in locale (offline, nessun CDN)
 │
 ├── index-old.html      ← Backup versione precedente
 ├── style-old.css       ← Backup versione precedente
@@ -218,7 +226,8 @@ UI.setupDarkModeHandler()
 
 ### 3️⃣ REFACTOR JAVASCRIPT
 ✅ **Moduli logici separati** - 12 moduli indipendenti, zero dipendenze
-✅ **Zero innerHTML** - Usati createElement e appending
+⚠️ **Rendering misto** - `createElement` + `innerHTML` con template string. Ogni
+valore utente passa per `Utils.escapeHtml`; i link per `Utils.safeUrl` (solo http/https)
 ✅ **Funzioni pure** - Validators, Utils senza side-effects
 ✅ **Event delegation** - Click/change su parent, non su item singoli
 ✅ **Caching DOM nodes** - DOM.element references persistenti
@@ -412,7 +421,7 @@ Utils.downloadCsv(csv, 'clienti_export.csv');
 
 ### JavaScript
 - [x] 12 moduli indipendenti
-- [x] Zero innerHTML (createElement)
+- [x] Rendering misto createElement + innerHTML (con escape/safeUrl obbligatori)
 - [x] Funzioni pure (Validators, Utils)
 - [x] Event delegation su parent
 - [x] DOM caching nodes principais
@@ -507,4 +516,35 @@ Prova a salvare vuoto
 **Status:** Production-Ready ✅
 **Browser:** Modern (Chrome, Firefox, Safari, Edge)
 **Performance:** ~30KB, Zero deps, 100% Vanilla JS
+
+---
+
+## 🆕 Aggiornamenti recenti (post-2.0)
+
+Modifiche introdotte dopo il report di modernizzazione sopra:
+
+### Bacheca Kanban (stile Trello)
+- Nuova sezione "Bacheca" con 3 colonne **Da fare / In corso / Completato**,
+  drag & drop, spostamento con frecce/tastiera, contatori e voce sidebar dedicata.
+- Il modulo `Tasks` è esteso con `status` (`todo`/`doing`/`done`), retro-compatibile
+  con il vecchio flag `completed` tramite normalizzazione in lettura. Lista attività
+  e bacheca condividono lo stesso storage e restano sincronizzate.
+
+### Sicurezza e accessibilità
+- Link validati e sanitizzati a **solo `http`/`https`** (`Validators.isValidUrl`,
+  `Utils.safeUrl`); rimosso l'`onclick` inline in favore della delega eventi.
+- Focus-trap della modale calcolato on-demand (`Modal.getFocusable`), così include i
+  contenuti iniettati dopo l'apertura; corretto il ripristino del focus in `Modal.close`.
+
+### Offline e repo hygiene
+- Font e icone **vendorizzati** in `vendor/` (nessun CDN): l'app funziona offline.
+  Rimossa la dipendenza da Material Icons (icona dark mode ora Font Awesome).
+- Aggiunto `.gitattributes` e normalizzati i fine-riga a **LF** (il repo aveva
+  CRLF/LF misti).
+
+### Moduli non citati nel report originale
+Oltre ai moduli sopra, il codice include: **`Assets`** (asset riutilizzabili),
+**`SidebarNav`** (navigazione verticale con scrollspy) e **`AlertDialog`** (conferme
+eliminazione sul `Modal`). Il "dark mode" non è un modulo separato ma
+`UI.setupDarkModeHandler`.
 
