@@ -24,6 +24,8 @@ const Storage = {
     appointments: 'panel_appointments',
     assets: 'panel_assets',
     darkMode: 'panel_dark_mode',
+    layoutExpanded: 'panel_layout_expanded',
+    sidebarCollapsed: 'panlink_sidebar_collapsed',
   },
 
   get(key, defaultValue = []) {
@@ -75,10 +77,13 @@ const Validators = {
     return value && value.trim().length > 0;
   },
 
+  // Accetta SOLO http/https: new URL() da solo considera valido anche
+  // `javascript:`, `data:`, `vbscript:` → potenziale XSS quando il valore
+  // finisce in un attributo href.
   isValidUrl(url) {
     try {
-      new URL(url);
-      return true;
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
       return false;
     }
@@ -96,7 +101,7 @@ const Validators = {
       return { valid: false, error: 'Link richiesto' };
     }
     if (!Validators.isValidUrl(link)) {
-      return { valid: false, error: 'Link non valido' };
+      return { valid: false, error: 'Il link deve iniziare con http:// o https://' };
     }
     return { valid: true };
   },
@@ -129,6 +134,18 @@ const Utils = {
       "'": '&#039;'
     };
     return String(text || '').replace(/[&<>"']/g, m => map[m]);
+  },
+
+  // Ritorna l'URL solo se ha schema http/https, altrimenti stringa vuota.
+  // Difesa in profondità per link `javascript:`/`data:` eventualmente già
+  // presenti in localStorage (salvati prima della validazione più stretta).
+  safeUrl(url) {
+    try {
+      const parsed = new URL(url);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? url : '';
+    } catch {
+      return '';
+    }
   },
 
   generateId() {
@@ -165,18 +182,6 @@ const Utils = {
     } catch {
       return isoString;
     }
-  },
-
-  generateEntityLink(entityName) {
-    const baseUrl = 'https://';
-    const domain = '.example.com';
-    const path = '/Appalti/InitLogin.do';
-    const slug = entityName
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9\-]/g, '');
-    return `${baseUrl}${slug}${domain}${path}`;
   },
 
   csvEscape(value) {
@@ -481,22 +486,41 @@ const Notes = {
 // TASKS MODULE - Task management
 // ============================================================================
 const Tasks = {
+  // Colonne della bacheca Kanban, in ordine
+  statuses: ['todo', 'doing', 'done'],
+
+  // Normalizza un task garantendo `status` e mantenendo `completed` sincronizzato
+  // per retro-compatibilita con i record salvati prima della bacheca.
+  normalize(task = {}) {
+    const status = Tasks.statuses.includes(task.status)
+      ? task.status
+      : (task.completed ? 'done' : 'todo');
+    return {
+      ...task,
+      id: task.id || Utils.generateId(),
+      text: task.text || '',
+      status,
+      completed: status === 'done',
+      createdAt: task.createdAt || new Date().toISOString()
+    };
+  },
+
   getAll() {
-    return Storage.get(Storage.keys.tasks, []);
+    return Storage.get(Storage.keys.tasks, []).map(Tasks.normalize);
   },
 
   save(tasksList) {
-    return Storage.set(Storage.keys.tasks, tasksList);
+    return Storage.set(Storage.keys.tasks, tasksList.map(Tasks.normalize));
   },
 
-  add(text) {
+  add(text, status = 'todo') {
     const tasks = Tasks.getAll();
-    const newTask = {
+    const newTask = Tasks.normalize({
       id: Utils.generateId(),
       text,
-      completed: false,
+      status,
       createdAt: new Date().toISOString()
-    };
+    });
     tasks.unshift(newTask);
     Tasks.save(tasks);
     return newTask;
@@ -506,10 +530,39 @@ const Tasks = {
     const tasks = Tasks.getAll();
     const task = tasks.find(t => t.id === id);
     if (task) {
-      task.completed = !task.completed;
+      task.status = task.status === 'done' ? 'todo' : 'done';
+      task.completed = task.status === 'done';
       Tasks.save(tasks);
     }
     return true;
+  },
+
+  // Sposta un task in una colonna della bacheca
+  setStatus(id, status) {
+    if (!Tasks.statuses.includes(status)) return false;
+    const tasks = Tasks.getAll();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return false;
+    if (task.status === status) return false;
+    task.status = status;
+    task.completed = status === 'done';
+    Tasks.save(tasks);
+    return true;
+  },
+
+  // Sposta un task alla colonna adiacente (dir = -1 sinistra, +1 destra)
+  moveByOffset(id, dir) {
+    const tasks = Tasks.getAll();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return false;
+    const current = Tasks.statuses.indexOf(task.status);
+    const next = current + dir;
+    if (next < 0 || next >= Tasks.statuses.length) return false;
+    return Tasks.setStatus(id, Tasks.statuses[next]);
+  },
+
+  getByStatus(status) {
+    return Tasks.getAll().filter(t => t.status === status);
   },
 
   delete(id) {
@@ -721,11 +774,14 @@ const Modal = {
       Modal.escapeHandler = null;
     }
 
-    // Restore previous focus
-    if (Modal.previousActiveElement && typeof Modal.previousActiveElement.focus === 'function') {
-      setTimeout(() => Modal.previousActiveElement.focus(), 100);
-    }
+    // Restore previous focus.
+    // Cattura l'elemento in una variabile locale PRIMA di azzerare la proprietà:
+    // il setTimeout è asincrono e leggerebbe altrimenti un valore già null.
+    const toFocus = Modal.previousActiveElement;
     Modal.previousActiveElement = null;
+    if (toFocus && typeof toFocus.focus === 'function') {
+      setTimeout(() => toFocus.focus(), 100);
+    }
   },
 
   isOpen() {
@@ -746,17 +802,28 @@ const Modal = {
     }
   },
 
-  setupFocusTrap() {
-    const focusableElements = Modal.element.querySelectorAll(
+  // Elementi focusabili calcolati ON DEMAND: il contenuto della modale può
+  // essere iniettato DOPO l'apertura (es. le checkbox asset), quindi non va
+  // memorizzato al momento dell'open. Esclude elementi disabilitati o nascosti.
+  getFocusable() {
+    const nodes = Modal.element.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    return Array.from(nodes).filter(el =>
+      !el.disabled && el.offsetParent !== null && el.getAttribute('aria-hidden') !== 'true'
+    );
+  },
 
+  setupFocusTrap() {
     const focusTrapHandler = (e) => {
       if (e.key !== 'Tab') return;
+      const focusable = Modal.getFocusable();
+      if (focusable.length === 0) return;
+      const firstElement = focusable[0];
+      const lastElement = focusable[focusable.length - 1];
+
       if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
+        if (document.activeElement === firstElement || !Modal.element.contains(document.activeElement)) {
           e.preventDefault();
           lastElement.focus();
         }
@@ -791,7 +858,6 @@ const DOM = {
   appointmentsRemote: document.getElementById('appointmentsRemote'),
   appointmentsOnsite: document.getElementById('appointmentsOnsite'),
   clientSearch: document.getElementById('clientSearch'),
-  generatedLink: document.getElementById('generatedLink'),
 
   // Clients rendering
   renderClients(clients = null) {
@@ -823,20 +889,27 @@ const DOM = {
         ${Assets.getByIds(client.assets).map(asset => `<span class="asset-badge">${Utils.escapeHtml(asset.name)}</span>`).join('')}
       </div>
     ` : '';
+    const safeLink = Utils.safeUrl(client.link);
+    const nameCell = safeLink
+      ? `<a href="${Utils.escapeHtml(safeLink)}"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="client-item__name">
+          ${Utils.escapeHtml(client.nome)}
+        </a>`
+      : `<span class="client-item__name client-item__name--unsafe"
+             title="Link non valido o non sicuro">
+          ${Utils.escapeHtml(client.nome)}
+        </span>`;
     div.innerHTML = `
       <div class="client-item__info">
-        <a href="${Utils.escapeHtml(client.link)}"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="client-item__name">
-          ${Utils.escapeHtml(client.nome)}
-        </a>
+        ${nameCell}
         <div class="client-item__date">${Utils.formatDate(client.createdAt)}</div>
         ${assetBadgesHtml}
       </div>
       <div class="client-item__actions">
         <button class="client-item__action-btn" title="Apri link"
-                onclick="window.open('${Utils.escapeHtml(client.link)}', '_blank')">
+                data-open-client="${client.id}" ${safeLink ? '' : 'disabled'}>
           <i class="fa-solid fa-up-right-from-square"></i>
         </button>
         <button class="client-item__action-btn" title="Modifica"
@@ -883,7 +956,7 @@ const DOM = {
     });
   },
 
-  // Tasks rendering
+  // Tasks rendering (lista semplice). Aggiorna sempre anche la bacheca Kanban.
   renderTasks() {
     const tasks = Tasks.getAll();
     DOM.tasksList.innerHTML = '';
@@ -894,28 +967,91 @@ const DOM = {
           <p>Nessuna attività ancora</p>
         </div>
       `;
-      return;
+    } else {
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = `task-item ${task.completed ? 'task-item--completed' : ''}`;
+        li.innerHTML = `
+          <input type="checkbox"  class="task-item__checkbox"
+                 data-toggle-task="${task.id}"
+                 ${task.completed ? 'checked' : ''}>
+          <span class="task-item__text">${Utils.escapeHtml(task.text)}</span>
+          <div class="task-item__actions">
+            <button class="task-item__action-btn" title="Modifica" data-edit-task="${task.id}">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="task-item__action-btn task-item__action-btn--delete"
+                    title="Elimina" data-delete-task="${task.id}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        DOM.tasksList.appendChild(li);
+      });
     }
 
-    tasks.forEach(task => {
-      const li = document.createElement('li');
-      li.className = `task-item ${task.completed ? 'task-item--completed' : ''}`;
-      li.innerHTML = `
-        <input type="checkbox"  class="task-item__checkbox" 
-               data-toggle-task="${task.id}" 
-               ${task.completed ? 'checked' : ''}>
-        <span class="task-item__text">${Utils.escapeHtml(task.text)}</span>
-        <div class="task-item__actions">
-          <button class="task-item__action-btn" title="Modifica" data-edit-task="${task.id}">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="task-item__action-btn task-item__action-btn--delete" 
-                  title="Elimina" data-delete-task="${task.id}">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
-      `;
-      DOM.tasksList.appendChild(li);
+    DOM.renderBoard();
+  },
+
+  // Etichette e stile per colonna della bacheca
+  boardMeta: {
+    todo:  { label: 'Da fare',    icon: 'fa-list-ul' },
+    doing: { label: 'In corso',   icon: 'fa-spinner' },
+    done:  { label: 'Completato', icon: 'fa-circle-check' }
+  },
+
+  // Kanban board rendering — ripopola solo le liste interne (le dropzone e i
+  // relativi handler delegati restano vivi tra un render e l'altro).
+  renderBoard() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+
+    const statusIndex = { todo: 0, doing: 1, done: 2 };
+
+    Tasks.statuses.forEach(status => {
+      const zone = board.querySelector(`[data-dropzone="${status}"]`);
+      const countEl = board.querySelector(`[data-count="${status}"]`);
+      if (!zone) return;
+
+      const items = Tasks.getByStatus(status);
+      if (countEl) countEl.textContent = items.length;
+
+      if (items.length === 0) {
+        zone.innerHTML = `<div class="kanban__empty">Trascina qui una card</div>`;
+        return;
+      }
+
+      const idx = statusIndex[status];
+      zone.innerHTML = items.map(task => {
+        const canPrev = idx > 0;
+        const canNext = idx < Tasks.statuses.length - 1;
+        return `
+          <article class="kanban-card kanban-card--${status}" draggable="true"
+                   data-task-id="${task.id}" tabindex="0"
+                   aria-label="${Utils.escapeHtml(task.text)}">
+            <div class="kanban-card__text">${Utils.escapeHtml(task.text)}</div>
+            <div class="kanban-card__footer">
+              <span class="kanban-card__date">${Utils.formatDateShort(task.createdAt)}</span>
+              <div class="kanban-card__actions">
+                <button class="kanban-card__btn" title="Sposta a sinistra"
+                        data-board-move="-1" data-task-id="${task.id}" ${canPrev ? '' : 'disabled'}>
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button class="kanban-card__btn" title="Sposta a destra"
+                        data-board-move="1" data-task-id="${task.id}" ${canNext ? '' : 'disabled'}>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button class="kanban-card__btn" title="Modifica" data-edit-task="${task.id}">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="kanban-card__btn kanban-card__btn--delete" title="Elimina" data-delete-task="${task.id}">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
     });
   },
 
@@ -968,10 +1104,18 @@ const UI = {
     UI.setupAssetHandlers();
     UI.setupNoteHandlers();
     UI.setupTaskHandlers();
+    UI.setupBoardHandlers();
     UI.setupAppointmentHandlers();
     UI.setupExportHandlers();
     UI.setupExpandHandler();
     UI.setupDarkModeHandler();
+  },
+
+  // Ridisegna la lista elementi rispettando il filtro di ricerca attivo,
+  // così add/edit/delete non azzerano la ricerca corrente.
+  refreshClients() {
+    const query = (DOM.clientSearch?.value || '').trim();
+    DOM.renderClients(query ? Clients.search(query) : null);
   },
 
   setupClientHandlers() {
@@ -979,20 +1123,27 @@ const UI = {
     const searchInput = DOM.clientSearch;
 
     addBtn?.addEventListener('click', () => UI.handleAddClient());
-    
+
     // Debounced search
-    searchInput?.addEventListener('input', 
-      Utils.debounce(() => {
-        const query = searchInput.value;
-        const results = Clients.search(query);
-        DOM.renderClients(results);
-      }, 300)
+    searchInput?.addEventListener('input',
+      Utils.debounce(() => UI.refreshClients(), 300)
     );
 
     // Event delegation for client actions
     DOM.clientsList.addEventListener('click', (e) => {
+      const openBtn = e.target.closest('[data-open-client]');
       const deleteBtn = e.target.closest('[data-delete-client]');
       const editBtn = e.target.closest('[data-edit-client]');
+
+      if (openBtn) {
+        const client = Clients.getAll().find(c => c.id === openBtn.dataset.openClient);
+        const safe = client ? Utils.safeUrl(client.link) : '';
+        if (safe) {
+          window.open(safe, '_blank', 'noopener,noreferrer');
+        } else {
+          Toast.warning('Link non valido o non sicuro');
+        }
+      }
 
       if (deleteBtn) {
         const clientId = deleteBtn.dataset.deleteClient;
@@ -1053,7 +1204,7 @@ const UI = {
       }
 
       DOM.renderAssets();
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Asset creato con successo');
       return true;
     });
@@ -1091,7 +1242,7 @@ const UI = {
       }
 
       DOM.renderAssets();
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Asset aggiornato');
       return true;
     });
@@ -1103,50 +1254,10 @@ const UI = {
       message: `Confermi l'eliminazione dell'asset "${asset?.name || 'selezionato'}"? L'asset verra rimosso anche da tutti gli elementi associati.`,
       onConfirm: () => {
         Assets.delete(assetId);
-        DOM.renderClients();
+        UI.refreshClients();
         DOM.renderAssets();
         Toast.success('Asset eliminato');
       }
-    });
-  },
-
-  handleViewAsset(assetId) {
-    const asset = Assets.getById(assetId);
-    if (!asset) return;
-
-    const clientsWithAsset = Clients.getAll().filter(c => 
-      (c.assets || []).includes(assetId)
-    );
-
-    const clientsList = clientsWithAsset.length > 0 
-      ? clientsWithAsset.map(c => `<li>${Utils.escapeHtml(c.nome)}</li>`).join('')
-      : '<li style="color: var(--color-text-muted); font-style: italic;">Nessun elemento associato</li>';
-
-    const content = `
-      <div class="form-group">
-        <label class="label">Nome:</label>
-        <p style="padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0; color: var(--color-text-primary);">
-          ${Utils.escapeHtml(asset.name)}
-        </p>
-      </div>
-      ${asset.description ? `
-        <div class="form-group">
-          <label class="label">Descrizione:</label>
-          <p style="padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0; color: var(--color-text-primary);">
-            ${Utils.escapeHtml(asset.description)}
-          </p>
-        </div>
-      ` : ''}
-      <div class="form-group">
-        <label class="label">Elementi associati:</label>
-        <ul style="list-style: none; padding: var(--spacing-md); background: var(--color-bg-secondary); border-radius: var(--radius-md); margin: var(--spacing-sm) 0 0 0;">
-          ${clientsList}
-        </ul>
-      </div>
-    `;
-
-    Modal.open(`Asset: ${asset.name}`, content, () => {
-      // View only - callback does nothing, modal closes on button click
     });
   },
 
@@ -1186,7 +1297,7 @@ const UI = {
       Clients.add(nome, link, selectedAssets);
       nameInput.value = '';
       linkInput.value = '';
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Elemento aggiunto con asset associati');
       return true;
     });
@@ -1226,7 +1337,7 @@ const UI = {
       }
 
       Clients.update(clientId, nome, link, selectedAssets);
-      DOM.renderClients();
+      UI.refreshClients();
       Toast.success('Elemento aggiornato');
       return true;
     });
@@ -1241,7 +1352,7 @@ const UI = {
       message: `Confermi l'eliminazione dell'elemento "${client?.nome || 'selezionato'}"?`,
       onConfirm: () => {
         Clients.delete(clientId);
-        DOM.renderClients();
+        UI.refreshClients();
         Toast.success('Elemento eliminato');
       }
     });
@@ -1366,12 +1477,13 @@ const UI = {
       const validation = Validators.validateTask(text);
       if (!validation.valid) {
         Toast.error(validation.error);
-        return;
+        return false; // mantiene aperta la modale su input non valido
       }
 
       Tasks.update(taskId, text);
       DOM.renderTasks();
       Toast.success('Task aggiornata');
+      return true;
     });
   },
 
@@ -1383,6 +1495,106 @@ const UI = {
         Tasks.delete(taskId);
         DOM.renderTasks();
         Toast.success('Task eliminata');
+      }
+    });
+  },
+
+  // ---- Kanban board (bacheca stile Trello) ----
+  setupBoardHandlers() {
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
+
+    const input = document.getElementById('boardTaskInput');
+    const addBtn = document.getElementById('boardAddTaskBtn');
+
+    const addFromInput = () => {
+      if (!input) return;
+      const validation = Validators.validateTask(input.value);
+      if (!validation.valid) {
+        Toast.error(validation.error);
+        return;
+      }
+      Tasks.add(input.value.trim(), 'todo');
+      input.value = '';
+      DOM.renderTasks();
+      Toast.success('Attività aggiunta');
+    };
+
+    addBtn?.addEventListener('click', addFromInput);
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addFromInput();
+    });
+
+    // Click delegato: sposta / modifica / elimina (edit e delete riusano gli handler task)
+    board.addEventListener('click', (e) => {
+      const moveBtn = e.target.closest('[data-board-move]');
+      const editBtn = e.target.closest('[data-edit-task]');
+      const deleteBtn = e.target.closest('[data-delete-task]');
+
+      if (moveBtn) {
+        const dir = parseInt(moveBtn.dataset.boardMove, 10);
+        if (Tasks.moveByOffset(moveBtn.dataset.taskId, dir)) {
+          DOM.renderTasks();
+        }
+        return;
+      }
+      if (editBtn) { UI.handleEditTask(editBtn.dataset.editTask); return; }
+      if (deleteBtn) { UI.handleDeleteTask(deleteBtn.dataset.deleteTask); }
+    });
+
+    // Tastiera: frecce ← / → spostano la card focalizzata
+    board.addEventListener('keydown', (e) => {
+      const card = e.target.closest('.kanban-card');
+      if (!card) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        if (Tasks.moveByOffset(card.dataset.taskId, dir)) DOM.renderTasks();
+      }
+    });
+
+    // ---- Drag & Drop (delegato sul contenitore, sopravvive ai re-render) ----
+    let draggingId = null;
+
+    board.addEventListener('dragstart', (e) => {
+      const card = e.target.closest('.kanban-card');
+      if (!card) return;
+      draggingId = card.dataset.taskId;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggingId);
+    });
+
+    board.addEventListener('dragend', (e) => {
+      e.target.closest('.kanban-card')?.classList.remove('is-dragging');
+      board.querySelectorAll('.kanban__list.is-over')
+        .forEach(el => el.classList.remove('is-over'));
+      draggingId = null;
+    });
+
+    board.addEventListener('dragover', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (!zone) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('is-over');
+    });
+
+    board.addEventListener('dragleave', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (zone && !zone.contains(e.relatedTarget)) {
+        zone.classList.remove('is-over');
+      }
+    });
+
+    board.addEventListener('drop', (e) => {
+      const zone = e.target.closest('[data-dropzone]');
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.remove('is-over');
+      const id = draggingId || e.dataTransfer.getData('text/plain');
+      if (id && Tasks.setStatus(id, zone.dataset.dropzone)) {
+        DOM.renderTasks();
       }
     });
   },
@@ -1502,7 +1714,7 @@ const UI = {
     };
 
     // Load saved preference
-    const isExpanded = Storage.get('panel_layout_expanded') === 'true';
+    const isExpanded = Storage.get(Storage.keys.layoutExpanded) === 'true';
     if (isExpanded) {
       container?.classList.add('layout-expanded');
       setExpandIcon(isExpanded);
@@ -1511,7 +1723,7 @@ const UI = {
     expandBtn?.addEventListener('click', () => {
       const expanded = container?.classList.toggle('layout-expanded');
       setExpandIcon(!!expanded);
-      Storage.set('panel_layout_expanded', expanded ? 'true' : 'false');
+      Storage.set(Storage.keys.layoutExpanded, expanded ? 'true' : 'false');
     });
   },
 
@@ -1519,17 +1731,27 @@ const UI = {
     const toggle = document.getElementById('darkModeToggle');
     const html = document.documentElement;
 
+    // Icona luna (tema chiaro) / sole (tema scuro)
+    const setDarkIcon = (dark) => {
+      const icon = toggle?.querySelector('i');
+      if (!icon) return;
+      icon.classList.toggle('fa-moon', !dark);
+      icon.classList.toggle('fa-sun', dark);
+    };
+
     // Load saved preference
     const isDark = Storage.get(Storage.keys.darkMode) === 'true';
     if (isDark) {
       html.classList.add('dark');
       toggle?.setAttribute('aria-pressed', 'true');
     }
+    setDarkIcon(isDark);
 
     toggle?.addEventListener('click', () => {
-      const isDark = html.classList.toggle('dark');
-      toggle.setAttribute('aria-pressed', isDark);
-      Storage.set(Storage.keys.darkMode, isDark ? 'true' : 'false');
+      const dark = html.classList.toggle('dark');
+      toggle.setAttribute('aria-pressed', dark);
+      setDarkIcon(dark);
+      Storage.set(Storage.keys.darkMode, dark ? 'true' : 'false');
     });
   }
 };
@@ -1538,7 +1760,7 @@ const UI = {
 // SIDEBAR NAV MODULE - Vertical navigation with accessibility
 // ============================================================================
 const SidebarNav = {
-  keyCollapsed: 'panlink_sidebar_collapsed',
+  keyCollapsed: Storage.keys.sidebarCollapsed,
   elements: {
     sidebar: null,
     toggle: null,
@@ -1679,15 +1901,6 @@ document.addEventListener('DOMContentLoaded', () => {
   Modal.init();
   UI.init();
   SidebarNav.init();
-});
-
-// External tools
-document.getElementById('openQueryBtn')?.addEventListener('click', () => {
-  window.open('https://eproc-academy.example.com/Appalti/Query.do', '_blank');
-});
-
-document.getElementById('openCrudBtn')?.addEventListener('click', () => {
-  window.open('https://eproc-academy.example.com/Appalti/CRUD.do', '_blank');
 });
 
 

@@ -1,0 +1,15 @@
+# Normalizza i fine-riga a LF per tutti i file di testo (il repo aveva
+# CRLF/LF misti). Rende i diff stabili tra sistemi operativi.
+* text=auto eol=lf
+
+# File binari: non toccare mai i fine-riga
+*.woff2 binary
+*.woff  binary
+*.ttf   binary
+*.eot   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.zip   binary
