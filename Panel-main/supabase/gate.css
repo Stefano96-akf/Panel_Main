@@ -1,0 +1,87 @@
+/* Overlay di login Supabase — usa i design token di style.css (light/dark) */
+
+.supa-locked { overflow: hidden; }
+
+.supa-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 500; /* sopra header, sidebar, modale */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+.supa-gate[hidden] { display: none; }
+
+.supa-gate__card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  padding: var(--spacing-2xl);
+}
+
+.supa-gate__title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+}
+.supa-gate__sub {
+  margin: 0 0 var(--spacing-xl);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.supa-gate__form { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+
+.supa-gate__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-sm);
+}
+.supa-gate__input {
+  padding: var(--spacing-md);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.supa-gate__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(11, 99, 255, 0.1);
+}
+
+.supa-gate__msg {
+  min-height: 1.2em;
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+}
+.supa-gate__msg[data-kind="error"] { color: var(--color-danger); }
+.supa-gate__msg[data-kind="ok"]    { color: var(--color-success); }
+.supa-gate__msg[data-kind="info"]  { color: var(--color-text-secondary); }
+
+.supa-gate__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+.supa-gate__actions .btn { flex: 1; justify-content: center; }
+
+.supa-gate__link {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-xs);
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-align: center;
+}
+.supa-gate__link:hover { text-decoration: underline; }

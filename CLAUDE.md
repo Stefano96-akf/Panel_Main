@@ -148,6 +148,19 @@ Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
   Se si aggiunge un'icona, usare una classe `fa-solid` già coperta dal woff2
   incluso (solo il set *solid* è vendorizzato; niente brands/regular).
 
+## Integrazione Supabase (opzionale, auth + sync)
+
+Sotto `Panel-main/supabase/` c'è un'integrazione **opzionale e inerte di default**
+per login + sincronizzazione cloud (vedi `SUPABASE_SETUP.md` alla radice).
+- È **disattivata** finché `supabase/config.js` contiene i placeholder: in quel caso
+  `window.sb` resta `null`, `boot.js` esce subito e l'app funziona come sempre
+  (solo `localStorage`). Non introdurre logica che assuma Supabase sempre presente.
+- Design: l'app resta **sincrona su `localStorage`**; `sync.js` fa da specchio
+  offline-first verso Supabase avvolgendo `Storage.set` (non riscrive il render
+  pipeline). Le chiavi localStorage restano la fonte per la UI.
+- Le tabelle Postgres usano **PK `text`** = l'`id` generato dal client, con RLS
+  per-utente. La `anon key` in `config.js` è pubblica per design.
+
 ## Git / workflow
 
 - Branch di sviluppo corrente: `claude/project-analysis-kanban-zt12k1`.

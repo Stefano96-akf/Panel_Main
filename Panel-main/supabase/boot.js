@@ -1,0 +1,109 @@
+/**
+ * Bootstrap dell'integrazione Supabase (auth gate + avvio sync).
+ * Da includere DOPO app.js. Inerte se Supabase non è configurato.
+ */
+(function () {
+  if (!window.sb) return; // nessuna config → app in modalità locale, nessun gate
+
+  const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+
+  // ---- Overlay di login ----
+  const gate = el(`
+    <div id="supaGate" class="supa-gate" role="dialog" aria-modal="true" aria-labelledby="supaGateTitle" hidden>
+      <div class="supa-gate__card">
+        <h2 id="supaGateTitle" class="supa-gate__title">Accedi a PanLink</h2>
+        <p class="supa-gate__sub">I tuoi dati sono sincronizzati e protetti sul tuo account.</p>
+        <form id="supaForm" class="supa-gate__form" autocomplete="on">
+          <label class="supa-gate__label" for="supaEmail">Email</label>
+          <input id="supaEmail" class="supa-gate__input" type="email" required autocomplete="email" placeholder="tu@esempio.it">
+          <label class="supa-gate__label" for="supaPassword">Password</label>
+          <input id="supaPassword" class="supa-gate__input" type="password" required autocomplete="current-password" minlength="6" placeholder="••••••••">
+          <div id="supaMsg" class="supa-gate__msg" role="status" aria-live="polite"></div>
+          <div class="supa-gate__actions">
+            <button id="supaSignIn" class="btn btn--primary" type="submit">Accedi</button>
+            <button id="supaSignUp" class="btn btn--secondary" type="button">Registrati</button>
+          </div>
+          <button id="supaMagic" class="supa-gate__link" type="button">Accedi con magic link (senza password)</button>
+        </form>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(gate);
+
+  const $ = (id) => gate.querySelector(id);
+  const emailEl = $('#supaEmail'), pwEl = $('#supaPassword'), msgEl = $('#supaMsg');
+  const form = $('#supaForm');
+
+  const showGate = (show) => {
+    gate.hidden = !show;
+    document.body.classList.toggle('supa-locked', show);
+  };
+  const setMsg = (text, kind = 'info') => { msgEl.textContent = text || ''; msgEl.dataset.kind = kind; };
+  const busy = (b) => form.querySelectorAll('button,input').forEach(x => x.disabled = b);
+
+  // ---- Logout nel header ----
+  let logoutBtn = null;
+  const mountLogout = (user) => {
+    const controls = document.querySelector('.header__controls');
+    if (!controls) return;
+    if (!logoutBtn) {
+      logoutBtn = el('<button id="supaLogout" class="btn btn--icon" title="Esci" aria-label="Esci"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i></button>');
+      logoutBtn.addEventListener('click', () => SupaAuth.signOut());
+      controls.appendChild(logoutBtn);
+    }
+    logoutBtn.title = 'Esci (' + (user?.email || '') + ')';
+  };
+  const unmountLogout = () => { logoutBtn?.remove(); logoutBtn = null; };
+
+  // ---- Handlers form ----
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setMsg('Accesso in corso…'); busy(true);
+    const { error } = await SupaAuth.signIn(emailEl.value.trim(), pwEl.value);
+    busy(false);
+    if (error) setMsg(traduci(error.message), 'error'); else setMsg('');
+  });
+
+  $('#supaSignUp').addEventListener('click', async () => {
+    if (!emailEl.value.trim() || pwEl.value.length < 6) { setMsg('Inserisci email e una password di almeno 6 caratteri.', 'error'); return; }
+    setMsg('Creazione account…'); busy(true);
+    const { data, error } = await SupaAuth.signUp(emailEl.value.trim(), pwEl.value);
+    busy(false);
+    if (error) { setMsg(traduci(error.message), 'error'); return; }
+    if (data.session) setMsg(''); // login immediato (conferma email disattivata)
+    else setMsg('Account creato. Controlla la tua email per confermare, poi accedi.', 'ok');
+  });
+
+  $('#supaMagic').addEventListener('click', async () => {
+    if (!emailEl.value.trim()) { setMsg('Inserisci prima la tua email.', 'error'); return; }
+    setMsg('Invio del link…'); busy(true);
+    const { error } = await SupaAuth.signInMagic(emailEl.value.trim());
+    busy(false);
+    setMsg(error ? traduci(error.message) : 'Ti abbiamo inviato un link di accesso via email.', error ? 'error' : 'ok');
+  });
+
+  function traduci(m) {
+    if (/Invalid login credentials/i.test(m)) return 'Email o password non validi.';
+    if (/already registered/i.test(m)) return 'Questa email è già registrata: usa "Accedi".';
+    if (/rate limit|too many/i.test(m)) return 'Troppi tentativi, riprova tra poco.';
+    return m;
+  }
+
+  // ---- Stato di autenticazione ----
+  SupaSync.install(); // aggancia Storage.set (attivo solo quando c'è userId)
+
+  SupaAuth.onChange(async (user) => {
+    if (user) {
+      showGate(false);
+      mountLogout(user);
+      try { await SupaSync.initialSync(user); } catch (e) { console.error(e); }
+    } else {
+      SupaSync.userId = null;
+      unmountLogout();
+      showGate(true);
+    }
+  });
+
+  // Stato iniziale al caricamento
+  SupaAuth.currentUser().then(user => { if (!user) showGate(true); });
+})();
