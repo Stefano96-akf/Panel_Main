@@ -63,15 +63,21 @@ window.PANLINK_SUPABASE = {
 > protezione reale è la **RLS**. NON inserire mai qui la `service_role` key.
 
 ## 4. Deploy su Vercel
-Import del repo su [vercel.com](https://vercel.com), poi **una** delle due opzioni:
+Import del repo su [vercel.com](https://vercel.com). **Passaggio fondamentale:**
+l'app sta nella sottocartella `Panel-main/`, quindi va impostata la Root Directory,
+altrimenti Vercel serve la root del repo (dove non c'è `index.html`) → **404**.
 
-- **A (consigliata):** Project Settings → *Root Directory* = `Panel-main`,
-  *Framework Preset* = **Other**, nessun build command. Vercel serve i file statici.
-- **B:** lascia la root del repo e usa il [`vercel.json`](vercel.json) incluso
-  (`outputDirectory: "Panel-main"`).
+- Project → *Settings → Build and Deployment* → **Root Directory = `Panel-main`**.
+- *Framework Preset* = **Other**, nessun build command (sito statico).
+- Salva e fai **Redeploy** (Deployments → ⋯ → *Redeploy*).
+
+> 404 sulla home dopo il deploy = quasi sempre Root Directory non impostata su
+> `Panel-main`. Nella pagina del deployment, la tab *Source* mostra cosa Vercel
+> sta servendo: se in cima vedi `CLAUDE.md`, `Panel-main/`, ecc., stai servendo
+> la root sbagliata.
 
 Dominio gratuito: `https://<progetto>.vercel.app` (HTTPS incluso). Ricorda di
-aggiungerlo ai *Redirect URLs* di Supabase (passo 2).
+aggiungere il dominio (incluso `skelety.app`) ai *Redirect URLs* di Supabase (passo 2).
 
 ## 5. Prova
 - In locale: `cd Panel-main && python3 -m http.server 8000` → apri
