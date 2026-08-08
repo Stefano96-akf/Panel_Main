@@ -13,6 +13,6 @@
  * come oggi (solo localStorage, nessun login): l'integrazione è "inerte".
  */
 window.PANLINK_SUPABASE = {
-  url: 'https://IL-TUO-PROGETTO.supabase.co',
-  anonKey: 'INCOLLA_QUI_LA_ANON_PUBLIC_KEY'
+  url: 'https://ijxpebljadtnxyeovosz.supabase.co',
+  anonKey: 'sb_publishable_HUamtsbvf0e2SLy4a5d6IA_FgNEmzmm'
 };

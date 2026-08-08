@@ -1703,28 +1703,13 @@ const UI = {
   },
 
   setupExpandHandler() {
-    const expandBtn = document.getElementById('expandClientsBtn');
-    const container = document.querySelector('.container');
-    const expandIcon = expandBtn?.querySelector('.expand-icon');
-
-    const setExpandIcon = (expanded) => {
-      if (!expandIcon) return;
-      expandIcon.classList.toggle('fa-expand', !expanded);
-      expandIcon.classList.toggle('fa-compress', expanded);
-    };
-
-    // Load saved preference
-    const isExpanded = Storage.get(Storage.keys.layoutExpanded) === 'true';
-    if (isExpanded) {
-      container?.classList.add('layout-expanded');
-      setExpandIcon(isExpanded);
+    // La funzione "espandi" è stata rimossa con il passaggio al layout a pagine.
+    // Bonifica un'eventuale preferenza vecchia in localStorage che altrimenti
+    // applicherebbe la classe layout-expanded rompendo il nuovo layout.
+    document.querySelector('.container')?.classList.remove('layout-expanded');
+    if (Storage.get(Storage.keys.layoutExpanded) === 'true') {
+      Storage.remove(Storage.keys.layoutExpanded);
     }
-
-    expandBtn?.addEventListener('click', () => {
-      const expanded = container?.classList.toggle('layout-expanded');
-      setExpandIcon(!!expanded);
-      Storage.set(Storage.keys.layoutExpanded, expanded ? 'true' : 'false');
-    });
   },
 
   setupDarkModeHandler() {
@@ -1766,7 +1751,7 @@ const SidebarNav = {
     toggle: null,
     links: []
   },
-  observer: null,
+  pages: [],
   init() {
     SidebarNav.elements.sidebar = document.getElementById('appSidebar');
     SidebarNav.elements.toggle = document.getElementById('sidebarToggle');
@@ -1774,10 +1759,11 @@ const SidebarNav = {
     if (!SidebarNav.elements.sidebar || !SidebarNav.elements.toggle || SidebarNav.elements.links.length === 0) {
       return;
     }
+    SidebarNav.pages = Array.from(document.querySelectorAll('.container .page'));
     SidebarNav.restoreState();
     SidebarNav.bindToggle();
     SidebarNav.bindLinks();
-    SidebarNav.bindObserver();
+    SidebarNav.bindRouting();
     SidebarNav.bindOutsideClose();
   },
   isMobile() {
@@ -1812,35 +1798,42 @@ const SidebarNav = {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const targetId = link.dataset.navTarget;
-        const target = document.getElementById(targetId);
-        if (!target) return;
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        SidebarNav.setActive(targetId);
-        if (SidebarNav.isMobile()) {
-          document.body.classList.remove('sidebar-open');
-          SidebarNav.updateToggleAria();
+        if (!document.getElementById(targetId)) return;
+        if (location.hash === '#' + targetId) {
+          SidebarNav.route();          // stesso hash: forza comunque lo switch
+        } else {
+          location.hash = targetId;    // → hashchange → route()
         }
       });
     });
   },
-  bindObserver() {
-    const targets = SidebarNav.elements.links
-      .map(link => document.getElementById(link.dataset.navTarget))
-      .filter(Boolean);
-    if (targets.length === 0) return;
-    SidebarNav.observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter(entry => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-      if (visible.length > 0) {
-        SidebarNav.setActive(visible[0].target.id);
-      }
-    }, {
-      root: null,
-      threshold: [0.35, 0.6],
-      rootMargin: '-90px 0px -45% 0px'
+  // Routing a pagine (hash-based): mostra una sola sezione per volta.
+  bindRouting() {
+    window.addEventListener('hashchange', () => SidebarNav.route());
+    SidebarNav.route(); // stato iniziale (da hash o pagina di default)
+  },
+  validTarget(id) {
+    return !!id
+      && SidebarNav.elements.links.some(l => l.dataset.navTarget === id)
+      && !!document.getElementById(id);
+  },
+  route() {
+    let id = (location.hash || '').replace(/^#/, '');
+    if (!SidebarNav.validTarget(id)) {
+      id = SidebarNav.elements.links[0]?.dataset.navTarget;
+    }
+    if (id) SidebarNav.showPage(id);
+  },
+  showPage(targetId) {
+    (SidebarNav.pages || []).forEach(page => {
+      page.classList.toggle('is-active', page.id === targetId);
     });
-    targets.forEach(target => SidebarNav.observer.observe(target));
+    SidebarNav.setActive(targetId);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (SidebarNav.isMobile()) {
+      document.body.classList.remove('sidebar-open');
+      SidebarNav.updateToggleAria();
+    }
   },
   bindOutsideClose() {
     document.addEventListener('click', (e) => {

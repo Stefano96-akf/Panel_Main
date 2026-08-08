@@ -2105,3 +2105,19 @@ html.dark .kanban__list.is-over {
   text-decoration: line-through;
 }
 
+/* ============================================================================
+   LAYOUT A PAGINE — una sezione (tab) visibile per volta, centrata
+   ============================================================================ */
+.container {
+  display: block;              /* annulla la griglia a 2 colonne */
+  grid-template-columns: none;
+  max-width: 1040px;
+}
+
+.page { display: none; }
+
+.page.is-active {
+  display: block;
+  animation: fadeIn var(--duration-normal) var(--ease-in-out);
+}
+

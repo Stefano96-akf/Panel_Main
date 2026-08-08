@@ -11,7 +11,7 @@
   const gate = el(`
     <div id="supaGate" class="supa-gate" role="dialog" aria-modal="true" aria-labelledby="supaGateTitle" hidden>
       <div class="supa-gate__card">
-        <h2 id="supaGateTitle" class="supa-gate__title">Accedi a PanLink</h2>
+        <h2 id="supaGateTitle" class="supa-gate__title">Accedi a Skelety</h2>
         <p class="supa-gate__sub">I tuoi dati sono sincronizzati e protetti sul tuo account.</p>
         <form id="supaForm" class="supa-gate__form" autocomplete="on">
           <label class="supa-gate__label" for="supaEmail">Email</label>
@@ -104,6 +104,6 @@
     }
   });
 
-  // Stato iniziale al caricamento
-  SupaAuth.currentUser().then(user => { if (!user) showGate(true); });
+  // Stato iniziale al caricamento (se Supabase non risponde, mostra comunque il gate)
+  SupaAuth.currentUser().then(user => { if (!user) showGate(true); }).catch(() => showGate(true));
 })();

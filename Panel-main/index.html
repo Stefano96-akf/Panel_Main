@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Panel - Dashboard gestione elementi, note e task 100% client-side">
-  <title>PanLink</title>
+  <meta name="description" content="Skelety - Dashboard gestione elementi, link, note, attività e appuntamenti (100% client-side)">
+  <title>Skelety</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <!-- Fonts & icone: vendorizzati in locale (nessun CDN) → funziona offline -->
@@ -86,7 +86,7 @@
   <!-- Sidebar Navigation -->
   <aside id="appSidebar" class="app-sidebar" aria-label="Navigazione principale">
     <div class="app-sidebar__inner">
-      <div class="app-sidebar__brand">PanLink</div>
+      <div class="app-sidebar__brand">Skelety</div>
       <nav class="app-sidebar__nav" aria-label="Sezioni pannello">
         <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" aria-current="page" title="Elementi & Link">
           <i class="fa-solid fa-address-book" aria-hidden="true"></i>
@@ -115,25 +115,22 @@
       </nav>
     </div>
   </aside>
-  <!-- Main Container -->
+  <!-- Main Container: ogni sezione è una "pagina" mostrata singolarmente -->
   <main class="container" role="main">
-    
-    <!-- Panel 1: Elementi -->
-    <section id="section-clients" class="panel" aria-labelledby="clients-title">
+
+    <!-- Pagina: Elementi & Link -->
+    <section id="section-clients" class="page panel is-active" aria-labelledby="clients-title">
       <div class="panel__header">
         <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
-        <button id="expandClientsBtn" class="btn btn--icon" title="Espandi a schermo intero" aria-label="Expand clients panel">
-          <i class="expand-icon fa-solid fa-expand" aria-hidden="true"></i>
-        </button>
       </div>
 
       <!-- Search Box -->
       <div class="form-group">
         <label for="clientSearch" class="label">Cerca..</label>
-        <input 
-          type="text" 
-          id="clientSearch" 
-          class="input" 
+        <input
+          type="text"
+          id="clientSearch"
+          class="input"
           placeholder="Digita nome o link..."
           aria-label="Cerca..."
         >
@@ -143,19 +140,19 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="clientName" class="label">Attributo</label>
-          <input 
-            type="text" 
-            id="clientName" 
-            class="input" 
+          <input
+            type="text"
+            id="clientName"
+            class="input"
             placeholder="Es. Sito Web"
           >
         </div>
         <div class="form-group">
           <label for="clientLink" class="label">Link:</label>
-          <input 
-            type="url" 
-            id="clientLink" 
-            class="input" 
+          <input
+            type="url"
+            id="clientLink"
+            class="input"
             placeholder="https://www.esempio.com"
           >
         </div>
@@ -175,7 +172,6 @@
         <!-- Clients rendered here -->
       </div>
 
-      <div id="section-export" class="nav-anchor" aria-hidden="true"></div>
       <!-- Export -->
       <div class="action-row">
         <button id="exportClientsBtn" class="btn btn--secondary btn--small">
@@ -184,8 +180,8 @@
       </div>
     </section>
 
-    <!-- Panel 2: Asset Management + Appuntamenti (colonna laterale) -->
-    <aside id="section-assets" class="panel" aria-label="Asset e appuntamenti">
+    <!-- Pagina: Asset -->
+    <section id="section-assets" class="page panel" aria-labelledby="assets-title">
       <h2 id="assets-title" class="panel__title">Asset</h2>
 
       <button id="createAssetBtnSide" data-create-asset-btn class="btn btn--primary btn--block" style="margin-bottom: var(--spacing-lg);">
@@ -195,122 +191,116 @@
       <div id="assetsList" class="assets-list" aria-live="polite" aria-label="Elenco asset">
         <!-- Assets rendered here -->
       </div>
-
-      <div id="section-appointments" class="card" aria-labelledby="appts-subtitle">
-        <h3 id="appts-subtitle" class="card__title">Prossimi appuntamenti</h3>
-        
-        <div class="form-group">
-          <label for="apptDate" class="label">Data:</label>
-          <input type="date" id="apptDate" class="input">
-        </div>
-
-        <div class="form-group">
-          <label for="apptDesc" class="label">Descrizione:</label>
-          <input 
-            type="text" 
-            id="apptDesc" 
-            class="input" 
-            placeholder="Es. Riunione operativa"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="apptType" class="label">Tipo:</label>
-          <select id="apptType" class="input">
-            <option value="remote">Da remoto</option>
-            <option value="onsite">Onsite</option>
-          </select>
-        </div>
-
-        <button id="addApptBtn" class="btn btn--primary btn--small">
-          <i class="fa-solid fa-calendar-plus"></i> Aggiungi
-        </button>
-
-        <!-- Appointments Display -->
-        <div class="appts-columns">
-          <div class="appts-column">
-            <h4 class="appts-column__title">
-              <i class="fa-solid fa-video"></i> Da remoto
-            </h4>
-            <ul id="appointmentsRemote" class="appts-list" role="list">
-              <!-- Appointments rendered here -->
-            </ul>
-          </div>
-
-          <div class="appts-column">
-            <h4 class="appts-column__title">
-              <i class="fa-solid fa-location-dot"></i> Onsite
-            </h4>
-            <ul id="appointmentsOnsite" class="appts-list" role="list">
-              <!-- Appointments rendered here -->
-            </ul>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Panel 3: Notes & Tasks -->
-    <section id="section-notes" class="panel" aria-labelledby="notes-title">
-      <h2 id="notes-title" class="panel__title">Note & Attività</h2>
-
-      <!-- Notes Section -->
-      <fieldset class="fieldset">
-        <legend class="legend">Note</legend>
-        
-        <div class="form-group">
-          <textarea 
-            id="noteInput" 
-            class="input textarea" 
-            placeholder="Aggiungi una nota..."
-            aria-label="Testo della nota"
-          ></textarea>
-        </div>
-        
-        <button id="addNoteBtn" class="btn btn--primary btn--small">
-          <i class="fa-solid fa-note-sticky"></i> Aggiungi Nota
-        </button>
-
-        <ul id="notesList" class="notes-list" aria-live="polite" role="list">
-          <!-- Notes rendered here -->
-        </ul>
-
-        <div class="action-row">
-          <button id="exportNotesBtn" class="btn btn--secondary btn--small">
-            <i class="fa-solid fa-download"></i> Esporta Note
-          </button>
-        </div>
-      </fieldset>
-
-      <hr class="divider">
-
-      <!-- Tasks Section -->
-      <fieldset id="section-tasks" class="fieldset">
-        <legend class="legend">Attività</legend>
-        
-        <div class="form-group">
-          <label for="taskInput" class="label">Nuova attività:</label>
-          <div class="input-group">
-            <input 
-              type="text" 
-              id="taskInput" 
-              class="input" 
-              placeholder="Aggiungi una task..."
-              aria-label="Descrizione task"
-            >
-            <button id="addTaskBtn" class="btn btn--primary btn--small">
-              <i class="fa-solid fa-check-circle"></i> Aggiungi
-            </button>
-          </div>
-        </div>
-
-        <ul id="tasksList" class="tasks-list" aria-live="polite" role="list">
-          <!-- Tasks rendered here -->
-        </ul>
-      </fieldset>
     </section>
 
-    <!-- Panel 4: Bacheca Kanban -->
-    <section id="section-board" class="panel panel--board" aria-labelledby="board-title">
+    <!-- Pagina: Note & Appunti -->
+    <section id="section-notes" class="page panel" aria-labelledby="notes-title">
+      <h2 id="notes-title" class="panel__title">Note &amp; Appunti</h2>
+
+      <div class="form-group">
+        <textarea
+          id="noteInput"
+          class="input textarea"
+          placeholder="Aggiungi una nota..."
+          aria-label="Testo della nota"
+        ></textarea>
+      </div>
+
+      <button id="addNoteBtn" class="btn btn--primary btn--small">
+        <i class="fa-solid fa-note-sticky"></i> Aggiungi Nota
+      </button>
+
+      <ul id="notesList" class="notes-list" aria-live="polite" role="list">
+        <!-- Notes rendered here -->
+      </ul>
+
+      <div class="action-row">
+        <button id="exportNotesBtn" class="btn btn--secondary btn--small">
+          <i class="fa-solid fa-download"></i> Esporta Note
+        </button>
+      </div>
+    </section>
+
+    <!-- Pagina: Attività -->
+    <section id="section-tasks" class="page panel" aria-labelledby="tasks-title">
+      <h2 id="tasks-title" class="panel__title">Attività</h2>
+
+      <div class="form-group">
+        <label for="taskInput" class="label">Nuova attività:</label>
+        <div class="input-group">
+          <input
+            type="text"
+            id="taskInput"
+            class="input"
+            placeholder="Aggiungi una task..."
+            aria-label="Descrizione task"
+          >
+          <button id="addTaskBtn" class="btn btn--primary btn--small">
+            <i class="fa-solid fa-check-circle"></i> Aggiungi
+          </button>
+        </div>
+      </div>
+
+      <ul id="tasksList" class="tasks-list" aria-live="polite" role="list">
+        <!-- Tasks rendered here -->
+      </ul>
+    </section>
+
+    <!-- Pagina: Appuntamenti -->
+    <section id="section-appointments" class="page panel" aria-labelledby="appts-title">
+      <h2 id="appts-title" class="panel__title">Appuntamenti</h2>
+
+      <div class="form-group">
+        <label for="apptDate" class="label">Data:</label>
+        <input type="date" id="apptDate" class="input">
+      </div>
+
+      <div class="form-group">
+        <label for="apptDesc" class="label">Descrizione:</label>
+        <input
+          type="text"
+          id="apptDesc"
+          class="input"
+          placeholder="Es. Riunione operativa"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="apptType" class="label">Tipo:</label>
+        <select id="apptType" class="input">
+          <option value="remote">Da remoto</option>
+          <option value="onsite">Onsite</option>
+        </select>
+      </div>
+
+      <button id="addApptBtn" class="btn btn--primary btn--small">
+        <i class="fa-solid fa-calendar-plus"></i> Aggiungi
+      </button>
+
+      <!-- Appointments Display -->
+      <div class="appts-columns">
+        <div class="appts-column">
+          <h4 class="appts-column__title">
+            <i class="fa-solid fa-video"></i> Da remoto
+          </h4>
+          <ul id="appointmentsRemote" class="appts-list" role="list">
+            <!-- Appointments rendered here -->
+          </ul>
+        </div>
+
+        <div class="appts-column">
+          <h4 class="appts-column__title">
+            <i class="fa-solid fa-location-dot"></i> Onsite
+          </h4>
+          <ul id="appointmentsOnsite" class="appts-list" role="list">
+            <!-- Appointments rendered here -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pagina: Bacheca Kanban -->
+    <section id="section-board" class="page panel panel--board" aria-labelledby="board-title">
       <div class="panel__header panel__header--board">
         <div>
           <h2 id="board-title" class="panel__title">Bacheca</h2>
