@@ -1,414 +1,465 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Skelety - Dashboard gestione elementi, link, note, attività e appuntamenti (100% client-side)">
-  <title>Skelety</title>
+  <meta name="description" content="Skelety — lo scheletro del tuo lavoro. Dashboard 100% client-side per elementi, asset, note, attività e appuntamenti.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-
-  <!-- Fonts & icone: vendorizzati in locale (nessun CDN) → funziona offline -->
-  <link rel="stylesheet" href="vendor/inter/inter.css">
-  <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
-
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="supabase/gate.css">
+  <title>Skelety — lo scheletro del tuo lavoro</title>
 </head>
 <body>
-  <!-- Header -->
-  <header class="header" role="banner">
-    <div class="header__content">
-      <div class="header__brand">
-        <svg
-          class="header__logo"
-          width="60"
-          height="60"
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#8b5cf6" />
-            </linearGradient>
-          </defs>
-          
-          <!-- Modern interconnected nodes forming P and L -->
-          <!-- Node network -->
-          <circle cx="30" cy="30" r="8" fill="url(#gradient1)" />
-          <circle cx="50" cy="20" r="6" fill="url(#gradient1)" opacity="0.8" />
-          <circle cx="70" cy="30" r="8" fill="url(#gradient1)" />
-          <circle cx="30" cy="70" r="8" fill="url(#gradient1)" />
-          <circle cx="70" cy="70" r="8" fill="url(#gradient1)" />
-          <circle cx="85" cy="85" r="6" fill="url(#gradient1)" opacity="0.8" />
-          
-          <!-- Connecting lines -->
-          <line x1="30" y1="30" x2="50" y2="20" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
-          <line x1="50" y1="20" x2="70" y2="30" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
-          <line x1="30" y1="30" x2="30" y2="70" stroke="url(#gradient1)" strokeWidth="3" />
-          <line x1="70" y1="30" x2="70" y2="70" stroke="url(#gradient1)" strokeWidth="3" />
-          <line x1="70" y1="70" x2="85" y2="85" stroke="url(#gradient1)" strokeWidth="2" opacity="0.6" />
-          
-          <!-- Abstract P curve -->
-          <path
-            d="M 30 30 Q 60 15 70 30"
-            stroke="url(#gradient1)"
-            strokeWidth="2.5"
-            fill="none"
-            opacity="0.4"
-          />
-        </svg>
-        
-        <div class="header__brand-text">
-          <h1 class="header__title">Dashboard</h1>
-          <p class="header__subtitle">gestione elementi, link, note e task</p>
-        </div>
-      </div>
+<style>
+  /* ---------- TOKENS: light di default, dark via media + toggle ---------- */
+  :root {
+    --bg: #eef1f7;
+    --bg-2: #e7ecf5;
+    --surface: #ffffff;
+    --ink: #0b1220;
+    --ink-soft: #3f4c66;
+    --muted: #6a778f;
+    --line: #d2dae8;
+    --line-strong: #b9c4d8;
+    --accent: #0b63ff;
+    --accent-2: #6d5bf0;
+    --node: 11, 99, 255;      /* rgb per il canvas */
+    --grid: rgba(11, 99, 255, .05);
+    --glow: rgba(11, 99, 255, .16);
+    --shadow: 0 20px 50px rgba(15, 23, 42, .12);
 
-      <div class="header__controls">
-        <button id="sidebarToggle" class="btn btn--icon sidebar-toggle" aria-label="Apri menu navigazione" aria-controls="appSidebar" aria-expanded="false" title="Menu">
-          <i class="fa-solid fa-bars" aria-hidden="true"></i>
-        </button>
-        <button
-          id="darkModeToggle"
-          class="btn btn--icon"
-          aria-pressed="false"
-          title="Attiva/Disattiva modalità scura"
-          aria-label="Toggle dark mode"
-        >
-          <i class="fa-solid fa-moon" aria-hidden="true"></i>
-        </button>
-      </div>
-    </div>
-  </header>
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a0f1a;
+      --bg-2: #0c1322;
+      --surface: #111b2c;
+      --ink: #e9eef8;
+      --ink-soft: #aebbd3;
+      --muted: #7889a2;
+      --line: #21304a;
+      --line-strong: #2c3e5c;
+      --accent: #4d8bff;
+      --accent-2: #8b8ef7;
+      --node: 77, 139, 255;
+      --grid: rgba(77, 139, 255, .06);
+      --glow: rgba(77, 139, 255, .20);
+      --shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0f1a;
+    --bg-2: #0c1322;
+    --surface: #111b2c;
+    --ink: #e9eef8;
+    --ink-soft: #aebbd3;
+    --muted: #7889a2;
+    --line: #21304a;
+    --line-strong: #2c3e5c;
+    --accent: #4d8bff;
+    --accent-2: #8b8ef7;
+    --node: 77, 139, 255;
+    --grid: rgba(77, 139, 255, .06);
+    --glow: rgba(77, 139, 255, .20);
+    --shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f7; --bg-2: #e7ecf5; --surface: #fff; --ink: #0b1220;
+    --ink-soft: #3f4c66; --muted: #6a778f; --line: #d2dae8; --line-strong: #b9c4d8;
+    --accent: #0b63ff; --accent-2: #6d5bf0; --node: 11,99,255;
+    --grid: rgba(11,99,255,.05); --glow: rgba(11,99,255,.16); --shadow: 0 20px 50px rgba(15,23,42,.12);
+  }
 
-  <!-- Sidebar Navigation -->
-  <aside id="appSidebar" class="app-sidebar" aria-label="Navigazione principale">
-    <div class="app-sidebar__inner">
-      <div class="app-sidebar__brand">Skelety</div>
-      <nav class="app-sidebar__nav" aria-label="Sezioni pannello">
-        <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" aria-current="page" title="Elementi & Link">
-          <i class="fa-solid fa-address-book" aria-hidden="true"></i>
-          <span>Elementi & Link</span>
-        </a>
-        <a href="#section-assets" class="app-sidebar__link" data-nav-target="section-assets" title="Asset">
-          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-          <span>Asset</span>
-        </a>
-        <a href="#section-notes" class="app-sidebar__link" data-nav-target="section-notes" title="Note & Appunti">
-          <i class="fa-solid fa-note-sticky" aria-hidden="true"></i>
-          <span>Note & Appunti</span>
-        </a>
-        <a href="#section-tasks" class="app-sidebar__link" data-nav-target="section-tasks" title="Attività">
-          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-          <span>Attività</span>
-        </a>
-        <a href="#section-board" class="app-sidebar__link" data-nav-target="section-board" title="Bacheca Kanban">
-          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-          <span>Bacheca</span>
-        </a>
-        <a href="#section-appointments" class="app-sidebar__link" data-nav-target="section-appointments" title="Appuntamenti">
-          <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
-          <span>Appuntamenti</span>
-        </a>
-      </nav>
-    </div>
-  </aside>
-  <!-- Main Container: ogni sezione è una "pagina" mostrata singolarmente -->
-  <main class="container" role="main">
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
 
-    <!-- Pagina: Elementi & Link -->
-    <section id="section-clients" class="page panel is-active" aria-labelledby="clients-title">
-      <div class="panel__header">
-        <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
-      </div>
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(20px, 5vw, 40px); }
 
-      <!-- Search Box -->
-      <div class="form-group">
-        <label for="clientSearch" class="label">Cerca..</label>
-        <input
-          type="text"
-          id="clientSearch"
-          class="input"
-          placeholder="Digita nome o link..."
-          aria-label="Cerca..."
-        >
-      </div>
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
 
-      <!-- Add Client Form -->
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="clientName" class="label">Attributo</label>
-          <input
-            type="text"
-            id="clientName"
-            class="input"
-            placeholder="Es. Sito Web"
-          >
-        </div>
-        <div class="form-group">
-          <label for="clientLink" class="label">Link:</label>
-          <input
-            type="url"
-            id="clientLink"
-            class="input"
-            placeholder="https://www.esempio.com"
-          >
-        </div>
-      </div>
+  /* ---------- TOP BAR ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+    padding: 16px clamp(20px, 5vw, 40px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-weight: 700; font-size: 17px;
+    letter-spacing: .02em; color: var(--ink);
+  }
+  .wordmark svg { width: 22px; height: 22px; color: var(--accent); flex: none; }
+  .topbar__actions { display: flex; align-items: center; gap: 10px; }
 
-      <div class="button-group">
-        <button id="addClientBtn" class="btn btn--primary">
-          <i class="fa-solid fa-plus"></i> Aggiungi Elemento
-        </button>
-        <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
-          <i class="fa-solid fa-layer-group"></i> Crea Asset
-        </button>
-      </div>
+  .icon-btn {
+    width: 38px; height: 38px; display: inline-grid; place-items: center;
+    background: transparent; border: 1px solid var(--line); border-radius: 9px;
+    color: var(--ink-soft); cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .icon-btn:hover { color: var(--ink); border-color: var(--line-strong); }
+  .icon-btn svg { width: 18px; height: 18px; }
 
-      <!-- Clients List -->
-      <div id="clientsList" class="clients-list" aria-live="polite" aria-label="Elenco elementi">
-        <!-- Clients rendered here -->
-      </div>
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
+    padding: 11px 18px; border-radius: 9px; cursor: pointer;
+    border: 1px solid transparent; white-space: nowrap;
+    transition: transform .12s ease, box-shadow .18s ease, background .18s, border-color .18s, color .18s;
+  }
+  .btn--primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 8px 22px var(--glow);
+  }
+  .btn--primary:hover { transform: translateY(-1px); box-shadow: 0 12px 30px var(--glow); }
+  .btn--ghost { color: var(--ink); border-color: var(--line-strong); background: transparent; }
+  .btn--ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn--lg { padding: 15px 24px; font-size: 14px; }
 
-      <!-- Export -->
-      <div class="action-row">
-        <button id="exportClientsBtn" class="btn btn--secondary btn--small">
-          <i class="fa-solid fa-download"></i> Esporta CSV
-        </button>
-      </div>
-    </section>
+  /* ---------- HERO ---------- */
+  .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hero__grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(120% 90% at 30% 20%, #000 30%, transparent 78%);
+  }
+  .hero__inner {
+    position: relative; z-index: 2;
+    max-width: var(--maxw); margin: 0 auto;
+    padding: clamp(80px, 14vh, 150px) clamp(20px, 5vw, 40px) clamp(70px, 12vh, 130px);
+  }
+  .hero__title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(44px, 8vw, 92px);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    margin: 0 0 24px;
+    max-width: 14ch;
+    text-wrap: balance;
+  }
+  .hero__title b { color: var(--accent); font-weight: 800; }
+  .hero__lead {
+    font-size: clamp(17px, 2.2vw, 21px);
+    color: var(--ink-soft);
+    margin: 0 0 36px;
+    max-width: 54ch;
+  }
+  .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .hero__meta {
+    margin-top: 46px; display: flex; flex-wrap: wrap; gap: 10px 26px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  }
+  .hero__meta span { display: inline-flex; align-items: center; gap: 8px; }
+  .hero__meta span::before { content: ""; width: 6px; height: 6px; background: var(--accent-2); border-radius: 50%; }
 
-    <!-- Pagina: Asset -->
-    <section id="section-assets" class="page panel" aria-labelledby="assets-title">
-      <h2 id="assets-title" class="panel__title">Asset</h2>
+  /* ---------- SECTION SHELL ---------- */
+  .section { padding: clamp(64px, 10vw, 110px) 0; }
+  .section-head { margin-bottom: clamp(32px, 5vw, 52px); max-width: 40ch; }
+  .section-head h2 {
+    font-family: var(--sans); font-weight: 800;
+    font-size: clamp(28px, 4.5vw, 44px); letter-spacing: -0.02em; line-height: 1.05;
+    margin: 0; text-wrap: balance;
+  }
 
-      <button id="createAssetBtnSide" data-create-asset-btn class="btn btn--primary btn--block" style="margin-bottom: var(--spacing-lg);">
-        <i class="fa-solid fa-layer-group"></i> Crea Asset
-      </button>
+  /* ---------- MODULES ---------- */
+  .modules__grid {
+    display: grid; gap: 1px;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .mcard {
+    position: relative;
+    background: var(--surface);
+    padding: 30px 26px 32px;
+    transition: background .2s;
+  }
+  .mcard:hover { background: color-mix(in srgb, var(--surface) 90%, var(--accent)); }
+  /* corner tick da disegno tecnico */
+  .mcard::before, .mcard::after {
+    content: ""; position: absolute; width: 12px; height: 12px;
+    border-color: var(--accent); opacity: 0; transition: opacity .2s;
+  }
+  .mcard::before { top: 12px; left: 12px; border-top: 2px solid; border-left: 2px solid; }
+  .mcard::after  { bottom: 12px; right: 12px; border-bottom: 2px solid; border-right: 2px solid; }
+  .mcard:hover::before, .mcard:hover::after { opacity: 1; }
+  .mcard__ix { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .mcard__icon {
+    width: 40px; height: 40px; margin: 14px 0 18px;
+    display: grid; place-items: center; color: var(--accent);
+    border: 1px solid var(--line-strong); border-radius: 10px;
+  }
+  .mcard__icon svg { width: 21px; height: 21px; }
+  .mcard h3 { font-family: var(--mono); font-size: 15px; letter-spacing: .01em; margin: 0 0 8px; color: var(--ink); }
+  .mcard p { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
 
-      <div id="assetsList" class="assets-list" aria-live="polite" aria-label="Elenco asset">
-        <!-- Assets rendered here -->
-      </div>
-    </section>
+  /* ---------- PRINCIPLES ---------- */
+  .principles { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-2); }
+  .principles__grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(20px, 4vw, 40px);
+    padding: clamp(40px, 6vw, 64px) 0;
+  }
+  .stat__k { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .stat__v { font-family: var(--sans); font-weight: 800; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.02em; margin: 8px 0 6px; }
+  .stat__d { color: var(--muted); font-size: 13.5px; }
 
-    <!-- Pagina: Note & Appunti -->
-    <section id="section-notes" class="page panel" aria-labelledby="notes-title">
-      <h2 id="notes-title" class="panel__title">Note &amp; Appunti</h2>
+  /* ---------- CTA BAND ---------- */
+  .cta-band { text-align: center; padding: clamp(70px, 11vw, 120px) 0; position: relative; overflow: hidden; }
+  .cta-band h2 {
+    font-family: var(--sans); font-weight: 800; letter-spacing: -.025em;
+    font-size: clamp(30px, 6vw, 60px); line-height: 1.02; margin: 0 0 12px; text-wrap: balance;
+  }
+  .cta-band p { color: var(--ink-soft); margin: 0 0 30px; font-size: 17px; }
 
-      <div class="form-group">
-        <textarea
-          id="noteInput"
-          class="input textarea"
-          placeholder="Aggiungi una nota..."
-          aria-label="Testo della nota"
-        ></textarea>
-      </div>
+  /* ---------- FOOTER ---------- */
+  .footer {
+    border-top: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    padding: 28px clamp(20px, 5vw, 40px);
+    font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  }
 
-      <button id="addNoteBtn" class="btn btn--primary btn--small">
-        <i class="fa-solid fa-note-sticky"></i> Aggiungi Nota
-      </button>
+  @media (max-width: 860px) {
+    .modules__grid { grid-template-columns: repeat(2, 1fr); }
+    .principles__grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .modules__grid { grid-template-columns: 1fr; }
+    .principles__grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
 
-      <ul id="notesList" class="notes-list" aria-live="polite" role="list">
-        <!-- Notes rendered here -->
-      </ul>
+  /* reveal iniziale */
+  .reveal { opacity: 0; transform: translateY(14px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .reveal.d1 { animation-delay: .06s; }
+  .reveal.d2 { animation-delay: .13s; }
+  .reveal.d3 { animation-delay: .2s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+</style>
 
-      <div class="action-row">
-        <button id="exportNotesBtn" class="btn btn--secondary btn--small">
-          <i class="fa-solid fa-download"></i> Esporta Note
-        </button>
-      </div>
-    </section>
-
-    <!-- Pagina: Attività -->
-    <section id="section-tasks" class="page panel" aria-labelledby="tasks-title">
-      <h2 id="tasks-title" class="panel__title">Attività</h2>
-
-      <div class="form-group">
-        <label for="taskInput" class="label">Nuova attività:</label>
-        <div class="input-group">
-          <input
-            type="text"
-            id="taskInput"
-            class="input"
-            placeholder="Aggiungi una task..."
-            aria-label="Descrizione task"
-          >
-          <button id="addTaskBtn" class="btn btn--primary btn--small">
-            <i class="fa-solid fa-check-circle"></i> Aggiungi
-          </button>
-        </div>
-      </div>
-
-      <ul id="tasksList" class="tasks-list" aria-live="polite" role="list">
-        <!-- Tasks rendered here -->
-      </ul>
-    </section>
-
-    <!-- Pagina: Appuntamenti -->
-    <section id="section-appointments" class="page panel" aria-labelledby="appts-title">
-      <h2 id="appts-title" class="panel__title">Appuntamenti</h2>
-
-      <div class="form-group">
-        <label for="apptDate" class="label">Data:</label>
-        <input type="date" id="apptDate" class="input">
-      </div>
-
-      <div class="form-group">
-        <label for="apptDesc" class="label">Descrizione:</label>
-        <input
-          type="text"
-          id="apptDesc"
-          class="input"
-          placeholder="Es. Riunione operativa"
-        >
-      </div>
-
-      <div class="form-group">
-        <label for="apptType" class="label">Tipo:</label>
-        <select id="apptType" class="input">
-          <option value="remote">Da remoto</option>
-          <option value="onsite">Onsite</option>
-        </select>
-      </div>
-
-      <button id="addApptBtn" class="btn btn--primary btn--small">
-        <i class="fa-solid fa-calendar-plus"></i> Aggiungi
-      </button>
-
-      <!-- Appointments Display -->
-      <div class="appts-columns">
-        <div class="appts-column">
-          <h4 class="appts-column__title">
-            <i class="fa-solid fa-video"></i> Da remoto
-          </h4>
-          <ul id="appointmentsRemote" class="appts-list" role="list">
-            <!-- Appointments rendered here -->
-          </ul>
-        </div>
-
-        <div class="appts-column">
-          <h4 class="appts-column__title">
-            <i class="fa-solid fa-location-dot"></i> Onsite
-          </h4>
-          <ul id="appointmentsOnsite" class="appts-list" role="list">
-            <!-- Appointments rendered here -->
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- Pagina: Bacheca Kanban -->
-    <section id="section-board" class="page panel panel--board" aria-labelledby="board-title">
-      <div class="panel__header panel__header--board">
-        <div>
-          <h2 id="board-title" class="panel__title">Bacheca</h2>
-          <p class="board__hint">
-            <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
-            Trascina le card tra le colonne, oppure usa le frecce ← →
-          </p>
-        </div>
-      </div>
-
-      <!-- Quick add -->
-      <div class="form-group board__add">
-        <label for="boardTaskInput" class="label">Aggiungi in "Da fare":</label>
-        <div class="input-group">
-          <input
-            type="text"
-            id="boardTaskInput"
-            class="input"
-            placeholder="Cosa c'è da fare?"
-            aria-label="Nuova attività nella colonna Da fare"
-          >
-          <button id="boardAddTaskBtn" class="btn btn--primary btn--small">
-            <i class="fa-solid fa-plus"></i> Aggiungi
-          </button>
-        </div>
-      </div>
-
-      <!-- Board columns -->
-      <div id="kanbanBoard" class="kanban" aria-label="Bacheca attività">
-        <section class="kanban__column kanban__column--todo" data-status="todo" aria-labelledby="col-todo-title">
-          <header class="kanban__column-header">
-            <h3 id="col-todo-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--todo" aria-hidden="true"></span>
-              Da fare
-            </h3>
-            <span class="kanban__count" data-count="todo">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="todo" aria-label="Colonna Da fare"></div>
-        </section>
-
-        <section class="kanban__column kanban__column--doing" data-status="doing" aria-labelledby="col-doing-title">
-          <header class="kanban__column-header">
-            <h3 id="col-doing-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--doing" aria-hidden="true"></span>
-              In corso
-            </h3>
-            <span class="kanban__count" data-count="doing">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="doing" aria-label="Colonna In corso"></div>
-        </section>
-
-        <section class="kanban__column kanban__column--done" data-status="done" aria-labelledby="col-done-title">
-          <header class="kanban__column-header">
-            <h3 id="col-done-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--done" aria-hidden="true"></span>
-              Completato
-            </h3>
-            <span class="kanban__count" data-count="done">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="done" aria-label="Colonna Completato"></div>
-        </section>
-      </div>
-    </section>
-  </main>
-
-  <!-- Toast Container -->
-  <div id="toastContainer" class="toast-container" role="region" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- Modal -->
-  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
-    <div class="modal__backdrop" data-modal-close></div>
-    <div class="modal__dialog">
-      <div class="modal__header">
-        <h3 id="modalTitle" class="modal__title">Modifica</h3>
-        <button class="btn btn--icon" data-modal-close aria-label="Chiudi modal" title="Chiudi (ESC)">
-          <i class="fa-solid fa-times"></i>
-        </button>
-      </div>
-      <div id="modalBody" class="modal__body">
-        <!-- Content injected here -->
-      </div>
-      <div class="modal__footer">
-        <button id="modalCancel" class="btn btn--secondary">Annulla</button>
-        <button id="modalSave" class="btn btn--primary">Salva</button>
-      </div>
-    </div>
+<header class="topbar">
+  <a class="wordmark" href="#top" aria-label="Skelety, home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <circle cx="6" cy="6" r="2.3" fill="currentColor" stroke="none"/>
+      <circle cx="18" cy="6" r="2.3" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="18" r="2.3" fill="currentColor" stroke="none"/>
+      <path d="M6 6 L18 6 M6 6 L12 18 M18 6 L12 18" opacity=".85"/>
+    </svg>
+    Skelety
+  </a>
+  <div class="topbar__actions">
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Cambia tema" title="Cambia tema">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    </button>
+    <a class="btn btn--primary" href="app.html">Accedi</a>
   </div>
+</header>
 
-  <!-- Supabase (opzionale): inerte finché supabase/config.js non è compilato.
-       Con le chiavi reali attiva login + sincronizzazione dei dati. -->
-  <script src="vendor/supabase/supabase.js"></script>
-  <script src="supabase/config.js"></script>
-  <script src="supabase/client.js"></script>
-  <script src="supabase/auth.js"></script>
-  <script src="supabase/sync.js"></script>
+<main>
+  <section class="hero" id="top">
+    <canvas class="hero__canvas" id="net" aria-hidden="true"></canvas>
+    <div class="hero__grid" aria-hidden="true"></div>
+    <div class="hero__inner">
+      <p class="eyebrow reveal">// infrastruttura personale · 100% nel tuo browser</p>
+      <h1 class="hero__title reveal d1">Lo scheletro<br>del tuo <b>lavoro</b>.</h1>
+      <p class="hero__lead reveal d2">Elementi &amp; link, asset, note, attività e appuntamenti tenuti insieme da un'unica struttura ordinata — tua, veloce, sincronizzata.</p>
+      <div class="hero__cta reveal d3">
+        <a class="btn btn--primary btn--lg" href="app.html">Accedi</a>
+        <a class="btn btn--ghost btn--lg" href="#moduli">Vedi i moduli</a>
+      </div>
+      <div class="hero__meta reveal d3">
+        <span>Nessuna installazione</span>
+        <span>Dati tuoi</span>
+        <span>Sync con Supabase</span>
+      </div>
+    </div>
+  </section>
 
-  <!-- Main App Script -->
-  <script src="app.js"></script>
+  <section class="section" id="moduli">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">/ moduli</p>
+        <h2>Sei sezioni, un'unica ossatura</h2>
+      </div>
+      <div class="modules__grid">
+        <article class="mcard">
+          <span class="mcard__ix">01</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg></div>
+          <h3>Elementi &amp; Link</h3>
+          <p>Salva risorse e collegamenti con ricerca istantanea e link validati.</p>
+        </article>
+        <article class="mcard">
+          <span class="mcard__ix">02</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 13l9 5 9-5"/></svg></div>
+          <h3>Asset</h3>
+          <p>Componenti riutilizzabili da associare a più elementi in un click.</p>
+        </article>
+        <article class="mcard">
+          <span class="mcard__ix">03</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M5 3h14v12l-6 6H5V3Z"/><path d="M13 21v-6h6"/></svg></div>
+          <h3>Note</h3>
+          <p>Appunti rapidi sempre a portata, esportabili quando servono.</p>
+        </article>
+        <article class="mcard">
+          <span class="mcard__ix">04</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h10M4 18h6"/><path d="M18 6l2 2 3-3"/></svg></div>
+          <h3>Attività</h3>
+          <p>Lista di task con stato, pronta a diventare una bacheca.</p>
+        </article>
+        <article class="mcard">
+          <span class="mcard__ix">05</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg></div>
+          <h3>Bacheca Kanban</h3>
+          <p>Da fare / In corso / Completato con drag &amp; drop, stile Trello.</p>
+        </article>
+        <article class="mcard">
+          <span class="mcard__ix">06</span>
+          <div class="mcard__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></div>
+          <h3>Appuntamenti</h3>
+          <p>Impegni da remoto o in sede, ordinati per data.</p>
+        </article>
+      </div>
+    </div>
+  </section>
 
-  <!-- Bootstrap Supabase: DOPO app.js (aggancia Storage e le viste) -->
-  <script src="supabase/boot.js"></script>
+  <section class="principles">
+    <div class="wrap">
+      <div class="principles__grid">
+        <div class="stat"><div class="stat__k">Proprietà</div><div class="stat__v">100% tuo</div><div class="stat__d">I dati partono dal tuo browser.</div></div>
+        <div class="stat"><div class="stat__k">Disponibilità</div><div class="stat__v">Offline-first</div><div class="stat__d">Funziona anche senza rete.</div></div>
+        <div class="stat"><div class="stat__k">Continuità</div><div class="stat__v">Sincronizzato</div><div class="stat__d">Ritrovi tutto su ogni dispositivo.</div></div>
+        <div class="stat"><div class="stat__k">Peso</div><div class="stat__v">Zero fronzoli</div><div class="stat__d">Vanilla JS, nessuna dipendenza.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div class="hero__grid" aria-hidden="true"></div>
+    <div class="wrap" style="position:relative;z-index:2">
+      <p class="eyebrow" style="justify-content:center">/ pronti?</p>
+      <h2>Monta la struttura<br>del tuo lavoro.</h2>
+      <p>Accedi con la tua email: i dati si sincronizzano al volo.</p>
+      <a class="btn btn--primary btn--lg" href="app.html">Inizia ora</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span class="wordmark" style="font-size:14px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="6" r="2.3" fill="currentColor" stroke="none"/><circle cx="18" cy="6" r="2.3" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="2.3" fill="currentColor" stroke="none"/><path d="M6 6 L18 6 M6 6 L12 18 M18 6 L12 18" opacity=".85"/></svg>
+    Skelety
+  </span>
+  <span>Dashboard 100% client-side · localStorage + Supabase</span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Tema (persistito) ----
+  var root = document.documentElement;
+  try {
+    var saved = localStorage.getItem('skelety_theme');
+    if (saved) root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var isDark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = isDark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('skelety_theme', next); } catch (e) {}
+    paintColors();
+  });
+
+  // ---- Rete di nodi (ossatura animata) ----
+  var canvas = document.getElementById('net');
+  var ctx = canvas.getContext('2d');
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W, H, DPR, nodes = [], rgb = '11,99,255';
+
+  function paintColors() {
+    var v = getComputedStyle(root).getPropertyValue('--node').trim();
+    if (v) rgb = v;
+  }
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  function build() {
+    var count = Math.max(22, Math.min(52, Math.round(W * H / 24000)));
+    nodes = [];
+    for (var i = 0; i < count; i++) {
+      nodes.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25,
+        r: Math.random() * 1.6 + 1.1
+      });
+    }
+  }
+  function frame() {
+    ctx.clearRect(0, 0, W, H);
+    var LINK = 150;
+    for (var i = 0; i < nodes.length; i++) {
+      var a = nodes[i];
+      if (!reduce) { a.x += a.vx; a.y += a.vy; }
+      if (a.x < 0 || a.x > W) a.vx *= -1;
+      if (a.y < 0 || a.y > H) a.vy *= -1;
+      for (var j = i + 1; j < nodes.length; j++) {
+        var b = nodes[j], dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
+        if (d < LINK) {
+          ctx.strokeStyle = 'rgba(' + rgb + ',' + (0.16 * (1 - d / LINK)).toFixed(3) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+    for (var k = 0; k < nodes.length; k++) {
+      var n = nodes[k];
+      ctx.fillStyle = 'rgba(' + rgb + ',0.55)';
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.2832); ctx.fill();
+    }
+    if (!reduce) raf = requestAnimationFrame(frame);
+  }
+  var raf;
+  function start() { resize(); build(); paintColors(); cancelAnimationFrame(raf); frame(); }
+  window.addEventListener('resize', function () { clearTimeout(window.__t); window.__t = setTimeout(start, 150); });
+  start();
+})();
+</script>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
