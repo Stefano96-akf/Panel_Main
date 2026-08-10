@@ -9,66 +9,26 @@
 </head>
 <body>
 <style>
-  /* ---------- TOKENS: light di default, dark via media + toggle ---------- */
+  /* ---------- TOKENS: tema unico "black blueprint" (solo nero) ---------- */
   :root {
-    --bg: #eef1f7;
-    --bg-2: #e7ecf5;
-    --surface: #ffffff;
-    --ink: #0b1220;
-    --ink-soft: #3f4c66;
-    --muted: #6a778f;
-    --line: #d2dae8;
-    --line-strong: #b9c4d8;
-    --accent: #0b63ff;
-    --accent-2: #6d5bf0;
-    --node: 11, 99, 255;      /* rgb per il canvas */
-    --grid: rgba(11, 99, 255, .05);
-    --glow: rgba(11, 99, 255, .16);
-    --shadow: 0 20px 50px rgba(15, 23, 42, .12);
+    --bg: #05070d;          /* nero-navy profondo */
+    --bg-2: #090d16;
+    --surface: #0d1420;
+    --ink: #eaeff8;
+    --ink-soft: #aab8d0;
+    --muted: #6f7f9a;
+    --line: #1b2740;
+    --line-strong: #29385a;
+    --accent: #4d8bff;
+    --accent-2: #8b8ef7;
+    --node: 77, 139, 255;      /* rgb per il canvas */
+    --grid: rgba(77, 139, 255, .05);
+    --glow: rgba(77, 139, 255, .22);
+    --shadow: 0 24px 60px rgba(0, 0, 0, .6);
 
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --maxw: 1120px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0a0f1a;
-      --bg-2: #0c1322;
-      --surface: #111b2c;
-      --ink: #e9eef8;
-      --ink-soft: #aebbd3;
-      --muted: #7889a2;
-      --line: #21304a;
-      --line-strong: #2c3e5c;
-      --accent: #4d8bff;
-      --accent-2: #8b8ef7;
-      --node: 77, 139, 255;
-      --grid: rgba(77, 139, 255, .06);
-      --glow: rgba(77, 139, 255, .20);
-      --shadow: 0 24px 60px rgba(0, 0, 0, .55);
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0a0f1a;
-    --bg-2: #0c1322;
-    --surface: #111b2c;
-    --ink: #e9eef8;
-    --ink-soft: #aebbd3;
-    --muted: #7889a2;
-    --line: #21304a;
-    --line-strong: #2c3e5c;
-    --accent: #4d8bff;
-    --accent-2: #8b8ef7;
-    --node: 77, 139, 255;
-    --grid: rgba(77, 139, 255, .06);
-    --glow: rgba(77, 139, 255, .20);
-    --shadow: 0 24px 60px rgba(0, 0, 0, .55);
-  }
-  :root[data-theme="light"] {
-    --bg: #eef1f7; --bg-2: #e7ecf5; --surface: #fff; --ink: #0b1220;
-    --ink-soft: #3f4c66; --muted: #6a778f; --line: #d2dae8; --line-strong: #b9c4d8;
-    --accent: #0b63ff; --accent-2: #6d5bf0; --node: 11,99,255;
-    --grid: rgba(11,99,255,.05); --glow: rgba(11,99,255,.16); --shadow: 0 20px 50px rgba(15,23,42,.12);
   }
 
   * { box-sizing: border-box; }
@@ -179,6 +139,24 @@
   .hero__meta span { display: inline-flex; align-items: center; gap: 8px; }
   .hero__meta span::before { content: ""; width: 6px; height: 6px; background: var(--accent-2); border-radius: 50%; }
 
+  /* ---------- MASCOTTE SCHELETRO ---------- */
+  .hero__mascot {
+    position: absolute; z-index: 2;
+    top: clamp(88px, 15vh, 176px);
+    right: clamp(16px, 5vw, 96px);
+    width: clamp(142px, 16vw, 214px);
+    filter: drop-shadow(0 12px 34px rgba(0, 0, 0, .55));
+    animation: floaty 5.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .hero__mascot .bone { fill: #e9eef8; stroke: #c3ccdd; stroke-width: 1.2; }
+  .hero__mascot .socket { fill: var(--bg); }
+  .hero__mascot .glint { fill: var(--accent); }
+  .hero__mascot .wave { transform-box: fill-box; transform-origin: 50% 92%; animation: wave 2.8s ease-in-out infinite; }
+  @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes wave { 0%, 55%, 100% { transform: rotate(0deg); } 15% { transform: rotate(-18deg); } 32% { transform: rotate(8deg); } 48% { transform: rotate(-18deg); } }
+  @media (max-width: 900px) { .hero__mascot { display: none; } }
+
   /* ---------- SECTION SHELL ---------- */
   .section { padding: clamp(64px, 10vw, 110px) 0; }
   .section-head { margin-bottom: clamp(32px, 5vw, 52px); max-width: 40ch; }
@@ -279,9 +257,6 @@
     Skelety
   </a>
   <div class="topbar__actions">
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Cambia tema" title="Cambia tema">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-    </button>
     <a class="btn btn--primary" href="app.html">Accedi</a>
   </div>
 </header>
@@ -304,6 +279,57 @@
         <span>Sync con Supabase</span>
       </div>
     </div>
+
+    <!-- Mascotte: scheletrino che saluta -->
+    <svg class="hero__mascot" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scheletrino mascotte che saluta">
+      <defs>
+        <radialGradient id="mglow" cx="50%" cy="42%" r="55%">
+          <stop offset="0" stop-color="#4d8bff" stop-opacity=".38"/>
+          <stop offset="1" stop-color="#4d8bff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="100" cy="98" rx="94" ry="98" fill="url(#mglow)"/>
+
+      <!-- braccio che saluta -->
+      <g class="wave">
+        <rect class="bone" x="142" y="72" width="11" height="42" rx="5.5" transform="rotate(20 147 93)"/>
+        <rect class="bone" x="150" y="42" width="11" height="38" rx="5.5" transform="rotate(-6 155 61)"/>
+        <circle class="bone" cx="151" cy="34" r="4.6"/>
+        <circle class="bone" cx="161" cy="31" r="4.6"/>
+        <circle class="bone" cx="170" cy="35" r="4.6"/>
+        <circle class="bone" cx="176" cy="43" r="4.6"/>
+      </g>
+
+      <!-- spina dorsale -->
+      <rect class="bone" x="94.5" y="150" width="11" height="66" rx="5.5"/>
+      <!-- costole -->
+      <g stroke="#c3ccdd" stroke-width="6" stroke-linecap="round" fill="none">
+        <path d="M100 162 q-26 4 -24 20"/>
+        <path d="M100 178 q-24 4 -22 19"/>
+        <path d="M100 194 q-20 4 -18 17"/>
+        <path d="M100 162 q26 4 24 20"/>
+        <path d="M100 178 q24 4 22 19"/>
+        <path d="M100 194 q20 4 18 17"/>
+      </g>
+
+      <!-- teschio -->
+      <ellipse class="bone" cx="100" cy="82" rx="52" ry="50"/>
+      <rect class="bone" x="74" y="118" width="52" height="26" rx="13"/>
+      <!-- occhi -->
+      <ellipse class="socket" cx="80" cy="82" rx="15" ry="18"/>
+      <ellipse class="socket" cx="120" cy="82" rx="15" ry="18"/>
+      <circle class="glint" cx="85" cy="76" r="4.2"/>
+      <circle class="glint" cx="125" cy="76" r="4.2"/>
+      <!-- naso -->
+      <path class="socket" d="M100 96 l-6 11 h12 z"/>
+      <!-- denti -->
+      <g stroke="#aab6cc" stroke-width="2" stroke-linecap="round">
+        <line x1="88" y1="121" x2="88" y2="140"/>
+        <line x1="96" y1="121" x2="96" y2="142"/>
+        <line x1="104" y1="121" x2="104" y2="142"/>
+        <line x1="112" y1="121" x2="112" y2="140"/>
+      </g>
+    </svg>
   </section>
 
   <section class="section" id="moduli">
@@ -387,20 +413,7 @@
 (function () {
   "use strict";
 
-  // ---- Tema (persistito) ----
   var root = document.documentElement;
-  try {
-    var saved = localStorage.getItem('skelety_theme');
-    if (saved) root.setAttribute('data-theme', saved);
-  } catch (e) {}
-  document.getElementById('themeBtn').addEventListener('click', function () {
-    var isDark = root.getAttribute('data-theme') === 'dark' ||
-      (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
-    var next = isDark ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem('skelety_theme', next); } catch (e) {}
-    paintColors();
-  });
 
   // ---- Rete di nodi (ossatura animata) ----
   var canvas = document.getElementById('net');

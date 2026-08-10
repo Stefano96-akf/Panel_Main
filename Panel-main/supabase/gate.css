@@ -10,8 +10,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
+  background: var(--color-bg-primary); /* opaco: nasconde la dashboard dietro */
 }
 .supa-gate[hidden] { display: none; }
 
