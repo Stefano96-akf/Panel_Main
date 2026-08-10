@@ -7,7 +7,7 @@ Come usarlo
 Funzionalità implementate in questa versione
 - Aggiungi / modifica / elimina clienti (nome + link) con salvataggio nel LocalStorage.
 - Ricerca in tempo reale dei clienti.
-- Generatore di link per ente (es. Comune di Napoli) con pulsante "Copia".
+- Generatore di link con pulsante "Copia".
 - Note & Appunti salvati localmente.
 - Modalità scura persistente (viene ricordata nel LocalStorage).
 - Presets rapidi per popolamento veloce del campo ente.
@@ -22,7 +22,7 @@ Suggerimenti di funzioni da implementare (possibili estensioni)
 1) Import / Export JSON
 	- Esporta l'elenco clienti / note in un file JSON e importa per ripristinare o condividere.
 2) Tag / categorie per clienti
-	- Aggiungere tag (es. "Comune", "Azienda"), filtri multipli e raggruppamenti.
+	- Aggiungere tag e categorie personalizzate, filtri multipli e raggruppamenti.
 3) Backup remoto / sincronizzazione
 	- Sincronizzare i dati con un piccolo backend (Firebase o API) per condividerli tra dispositivi.
 4) Bulk actions

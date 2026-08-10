@@ -326,7 +326,7 @@ xl: 0 25px 50px rgba(...)   (modal backdrop)
 
 ### Aggiungere un Nuovo Client
 ```javascript
-Clients.add('Roma Capitale', 'https://roma.it', ['APPALTI&CONTRATTI', 'LFS']);
+Clients.add('Fornitore Alpha', 'https://esempio.com', ['assetId1', 'assetId2']);
 DOM.renderClients();
 Toast.success('Cliente aggiunto');
 ```
@@ -523,7 +523,7 @@ Prova a salvare vuoto
 
 Modifiche introdotte dopo il report di modernizzazione sopra:
 
-### Bacheca Kanban (stile Trello)
+### Bacheca Kanban
 - Nuova sezione "Bacheca" con 3 colonne **Da fare / In corso / Completato**,
   drag & drop, spostamento con frecce/tastiera, contatori e voce sidebar dedicata.
 - Il modulo `Tasks` è esteso con `status` (`todo`/`doing`/`done`), retro-compatibile

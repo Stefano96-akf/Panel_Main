@@ -35,26 +35,23 @@ flussi CRUD, persistenza dopo refresh, dark mode, responsive sidebar, console se
 
 ```
 Panel-main/
-├── index.html          # Markup semantico + ARIA (unica pagina)
+├── index.html          # Landing page pubblica (Skelety) — entry point su /
+├── app.html            # L'app (dashboard a pagine) — dietro login Supabase
 ├── style.css           # Design system completo con CSS custom properties
 ├── app.js              # Tutta la logica applicativa (moduli come object literal)
 ├── favicon.svg
 │
 ├── vendor/             # Asset locali (offline, nessun CDN)
-│   ├── fontawesome/    # Font Awesome (solo fa-solid) — CSS + woff2
-│   └── inter/          # Font Inter (pesi 300-700) — inter.css + woff2
+│   ├── fontawesome/    #   Font Awesome (solo fa-solid) — CSS + woff2
+│   ├── inter/          #   Font Inter (pesi 300-700) — inter.css + woff2
+│   └── supabase/       #   supabase-js (UMD vendorizzato)
 │
-├── index-old.html      # Backup versione precedente (NON usare/modificare)
-├── style-old.css       # Backup versione precedente
-├── app-old.js          # Backup versione precedente
-├── Panel.zip           # Archivio storico
-├── ARCHITETTURA.md     # Doc architetturale (parzialmente disallineata dal codice)
+├── supabase/           # Integrazione auth+sync: schema.sql, config/client/auth/sync/boot, gate.css
+│
+├── ARCHITETTURA.md     # Doc architetturale (report storico v2.0)
 ├── WEBAPP_GUIDE.md     # Guida funzionale
 └── Readme.txt          # README iniziale
 ```
-
-I file `*-old.*`, `Panel.zip` e `logo.png` (0 byte) sono residui storici: non sono
-referenziati da `index.html` e non vanno modificati salvo richiesta esplicita.
 
 ## Architettura JavaScript
 
@@ -165,4 +162,5 @@ per login + sincronizzazione cloud (vedi `SUPABASE_SETUP.md` alla radice).
 
 - Branch di sviluppo corrente: `claude/project-analysis-kanban-zt12k1`.
 - Commit chiari e descrittivi; **non** aprire PR salvo richiesta esplicita.
-- Non modificare i file `*-old.*` o gli archivi storici.
+- Nei placeholder e nei valori di esempio usare testi generici: niente riferimenti
+  a programmi/prodotti esterni o a contesti specifici.

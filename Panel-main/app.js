@@ -1185,7 +1185,7 @@ const UI = {
     const content = `
       <div class="form-group">
         <label for="assetName" class="label">Nome Asset:</label>
-        <input type="text" id="assetName" class="input" placeholder="es. Modulo applicativo LFS">
+        <input type="text" id="assetName" class="input" placeholder="es. Modulo riutilizzabile">
       </div>
       <div class="form-group">
         <label for="assetDescription" class="label">Descrizione (opzionale):</label>
@@ -1499,7 +1499,7 @@ const UI = {
     });
   },
 
-  // ---- Kanban board (bacheca stile Trello) ----
+  // ---- Kanban board (bacheca) ----
   setupBoardHandlers() {
     const board = document.getElementById('kanbanBoard');
     if (!board) return;

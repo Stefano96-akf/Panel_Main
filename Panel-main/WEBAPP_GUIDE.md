@@ -102,7 +102,7 @@ Sidebar verticale con:
 4. Salvataggio elemento con `assets[]`.
 5. Re-render lista (con `UI.refreshClients()`, che preserva il filtro attivo) + toast.
 
-### Bacheca Kanban (stile Trello)
+### Bacheca Kanban
 1. Sezione "Bacheca" con 3 colonne: **Da fare / In corso / Completato**.
 2. Le card si spostano via **drag & drop**, pulsanti freccia o tastiera (← →).
 3. Lista attività e bacheca condividono lo stesso storage: spuntare una task nella
