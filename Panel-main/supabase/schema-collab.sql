@@ -150,19 +150,68 @@ create policy inv_all on public.invitations for all
   using (public.is_admin(workspace_id)) with check (public.is_admin(workspace_id));
 
 -- ============================================================================
--- PARTE 2 · IL "FLIP" delle 5 tabelle dati (applicare col deploy dell'app)
+-- PARTE 2 · IL "FLIP" delle 5 tabelle dati
 -- Aggiunge workspace_id e sposta la RLS da user_id a membership+permesso.
--- Lasciata commentata: la applichiamo insieme all'app aggiornata.
+-- Va applicata INSIEME al deploy dell'app "Collaboratori": la app aggiornata
+-- invia workspace_id e legge/scrive per workspace. Sicuro perché le 5 tabelle
+-- sono vuote (nessun dato da migrare); user_id resta come autore della riga.
 -- ============================================================================
--- alter table public.clients      add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade;
--- alter table public.assets       add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade;
--- alter table public.notes        add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade;
--- alter table public.tasks        add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade;
--- alter table public.appointments add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade;
---
--- -- Esempio (clients): sostituire la policy "own rows" con membership+permesso
--- -- drop policy "own rows" on public.clients;
--- -- create policy clients_read  on public.clients for select using (public.is_member(workspace_id));
--- -- create policy clients_write on public.clients for all
--- --   using (public.can_edit(workspace_id,'clients')) with check (public.can_edit(workspace_id,'clients'));
--- -- (ripetere per assets/notes/tasks/appointments con la rispettiva sezione)
+
+-- 2a) Colonna workspace_id (tabelle vuote → NOT NULL diretto) + indici
+alter table public.clients      add column if not exists workspace_id uuid not null references public.workspaces(id) on delete cascade;
+alter table public.assets       add column if not exists workspace_id uuid not null references public.workspaces(id) on delete cascade;
+alter table public.notes        add column if not exists workspace_id uuid not null references public.workspaces(id) on delete cascade;
+alter table public.tasks        add column if not exists workspace_id uuid not null references public.workspaces(id) on delete cascade;
+alter table public.appointments add column if not exists workspace_id uuid not null references public.workspaces(id) on delete cascade;
+
+create index if not exists clients_ws_idx      on public.clients (workspace_id);
+create index if not exists assets_ws_idx       on public.assets (workspace_id);
+create index if not exists notes_ws_idx        on public.notes (workspace_id);
+create index if not exists tasks_ws_idx        on public.tasks (workspace_id);
+create index if not exists appointments_ws_idx on public.appointments (workspace_id);
+
+-- 2b) RLS: da "own rows" (user_id) a membership (lettura) + permesso (scrittura)
+--     per ogni tabella il nome sezione coincide col nome tabella.
+do $$
+declare t text;
+begin
+  for t in select unnest(array['clients','assets','notes','tasks','appointments']) loop
+    execute format('drop policy if exists %I on public.%I', 'own rows', t);
+    execute format('drop policy if exists %I on public.%I', t || '_read', t);
+    execute format('create policy %I on public.%I for select using (public.is_member(workspace_id))', t || '_read', t);
+    execute format('drop policy if exists %I on public.%I', t || '_write', t);
+    execute format('create policy %I on public.%I for all using (public.can_edit(workspace_id, %L)) with check (public.can_edit(workspace_id, %L))', t || '_write', t, t, t);
+  end loop;
+end $$;
+
+-- 2c) Accettazione inviti al primo login (l'invitato non è ancora membro →
+--     SECURITY DEFINER per aggirare la RLS solo per questa operazione mirata)
+create or replace function public.accept_invitations()
+returns integer language plpgsql security definer set search_path = public as $$
+declare cnt int := 0; inv record; em text;
+begin
+  select email into em from auth.users where id = auth.uid();
+  if em is null then return 0; end if;
+  for inv in select * from public.invitations
+             where status = 'pending' and lower(email) = lower(em)
+  loop
+    insert into public.workspace_members (workspace_id, user_id, role, overrides)
+    values (inv.workspace_id, auth.uid(), inv.role, inv.overrides)
+    on conflict (workspace_id, user_id) do nothing;
+    update public.invitations set status = 'accepted' where id = inv.id;
+    cnt := cnt + 1;
+  end loop;
+  return cnt;
+end $$;
+
+-- 2d) Elenco email dei membri (join con auth.users, non leggibile lato client;
+--     ristretto ai soli membri del workspace richiesto)
+create or replace function public.workspace_members_emails(ws uuid)
+returns table (user_id uuid, email text, role public.member_role, overrides jsonb, created_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select m.user_id, u.email, m.role, m.overrides, m.created_at
+  from public.workspace_members m
+  join auth.users u on u.id = m.user_id
+  where m.workspace_id = ws and public.is_member(ws)
+  order by m.created_at;
+$$;

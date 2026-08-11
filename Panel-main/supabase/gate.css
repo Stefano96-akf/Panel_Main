@@ -84,3 +84,89 @@
   text-align: center;
 }
 .supa-gate__link:hover { text-decoration: underline; }
+
+/* ============================================================================
+   PERMESSI: gating sezioni + UI Collaboratori
+   ============================================================================ */
+.perm-hidden { display: none !important; }
+
+/* Sola lettura: nasconde i controlli di modifica */
+.page.is-readonly .client-item__actions,
+.page.is-readonly .asset-item__actions,
+.page.is-readonly .task-item__actions,
+.page.is-readonly .kanban-card__actions,
+.page.is-readonly .note-item__delete,
+.page.is-readonly .appt-item__actions { display: none !important; }
+.page.is-readonly .task-item__checkbox,
+.page.is-readonly .appt-item__checkbox { pointer-events: none; opacity: .5; }
+.page.is-readonly .kanban-card { cursor: default; }
+
+#section-clients.is-readonly .form-grid,
+#section-clients.is-readonly .button-group,
+#section-clients.is-readonly .action-row,
+#section-assets.is-readonly [data-create-asset-btn],
+#section-notes.is-readonly #noteInput,
+#section-notes.is-readonly #addNoteBtn,
+#section-notes.is-readonly .action-row,
+#section-tasks.is-readonly .input-group,
+#section-board.is-readonly .board__add,
+#section-appointments.is-readonly .form-group,
+#section-appointments.is-readonly #addApptBtn { display: none !important; }
+
+/* Banner sola lettura (facoltativo, via ::before sul titolo) */
+.page.is-readonly .panel__title::after {
+  content: " · sola lettura";
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
+}
+
+/* ---- UI Collaboratori ---- */
+.team { display: flex; flex-direction: column; gap: var(--spacing-lg); }
+.team__switch { max-width: 360px; }
+.team__card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+.team__h { font-size: var(--font-size-lg); margin: 0 0 var(--spacing-md); color: var(--color-text-primary); }
+.team__invite { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+.team__invite .input { flex: 1; min-width: 180px; margin: 0; }
+.team__invite select.input { flex: 0 0 auto; width: auto; }
+.team__hint { margin: var(--spacing-sm) 0 0; font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.team__invites, .team__members { list-style: none; margin: var(--spacing-md) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.team__invites li {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-sm);
+  font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  padding: var(--spacing-sm) var(--spacing-md); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+
+.team__member {
+  padding: var(--spacing-md); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+.team__member-main { display: flex; align-items: center; gap: var(--spacing-md); flex-wrap: wrap; }
+.team__email { font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
+.team__email em { color: var(--color-text-muted); font-style: normal; font-size: var(--font-size-xs); }
+.team__role { width: auto; margin: 0; padding: var(--spacing-xs) var(--spacing-sm); }
+.team__badge {
+  padding: 2px var(--spacing-sm); border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold);
+  background: var(--color-primary-light); color: var(--color-primary);
+}
+.team__badge--owner { background: var(--color-primary); color: #fff; }
+.team__link { margin-left: auto; background: none; border: none; color: var(--color-primary); cursor: pointer; font-size: var(--font-size-sm); }
+.team__link:hover { text-decoration: underline; }
+.team__link--danger { color: var(--color-danger); }
+
+.team__perms { margin-top: var(--spacing-md); }
+.team__perms summary { cursor: pointer; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+.team__perms-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-sm); margin-top: var(--spacing-sm);
+}
+.team__perms-grid label { display: flex; flex-direction: column; gap: 4px; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.team__perms-grid select { width: 100%; padding: var(--spacing-xs) var(--spacing-sm); }

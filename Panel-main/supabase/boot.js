@@ -89,16 +89,49 @@
     return m;
   }
 
+  // ---- Gating permessi: mostra/nasconde o rende sola-lettura le sezioni ----
+  const SkeletyGate = {
+    sectionPages: {
+      clients: ['section-clients'],
+      assets: ['section-assets'],
+      notes: ['section-notes'],
+      tasks: ['section-tasks', 'section-board'],
+      appointments: ['section-appointments']
+    },
+    applyPermissions() {
+      if (!window.Workspace || !Workspace.current()) return;
+      Object.entries(SkeletyGate.sectionPages).forEach(([section, pages]) => {
+        const perm = Workspace.permFor(section);
+        pages.forEach(pid => {
+          const page = document.getElementById(pid);
+          const link = document.querySelector('[data-nav-target="' + pid + '"]');
+          const hidden = perm === 'none';
+          if (page) { page.classList.toggle('perm-hidden', hidden); page.classList.toggle('is-readonly', perm === 'view'); }
+          if (link) link.classList.toggle('perm-hidden', hidden);
+        });
+      });
+      document.querySelector('[data-nav-target="section-team"]')?.classList.remove('perm-hidden');
+    }
+  };
+  window.SkeletyGate = SkeletyGate;
+
   // ---- Stato di autenticazione ----
-  SupaSync.install(); // aggancia Storage.set (attivo solo quando c'è userId)
+  SupaSync.install();          // aggancia Storage.set
+  if (window.Team) Team.init(); // bind UI Collaboratori (una volta)
 
   SupaAuth.onChange(async (user) => {
     if (user) {
       showGate(false);
       mountLogout(user);
-      try { await SupaSync.initialSync(user); } catch (e) { console.error(e); }
+      try {
+        await Workspace.bootstrap(user);   // workspace + inviti accettati
+        await SupaSync.initialSync(user);  // dati del workspace corrente
+        SkeletyGate.applyPermissions();    // sezioni per permesso
+        if (window.Team) await Team.render();
+      } catch (e) { console.error('[boot]', e); }
     } else {
       SupaSync.userId = null;
+      if (window.Workspace) Workspace.state.currentId = null;
       unmountLogout();
       showGate(true);
     }

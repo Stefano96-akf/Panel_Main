@@ -1,18 +1,15 @@
 /**
- * Sincronizzazione offline-first tra localStorage e Supabase.
+ * Sincronizzazione offline-first tra localStorage e Supabase (per-workspace).
  *
- * Filosofia: l'app continua a leggere/scrivere localStorage in modo SINCRONO
- * (nessuna modifica al render pipeline). Questo modulo rispecchia i dati verso
- * Supabase in modo trasparente:
- *   - al login: PULL del cloud → localStorage → re-render (il cloud è la fonte
- *     di verità; se il cloud è vuoto e il locale ha dati, il locale viene
- *     caricato come seed);
- *   - ad ogni scrittura locale (Storage.set): PUSH snapshot della tabella
- *     interessata (upsert delle righe presenti + delete di quelle rimosse).
+ * L'app continua a leggere/scrivere localStorage in modo SINCRONO; questo modulo
+ * rispecchia i dati verso Supabase sul WORKSPACE corrente:
+ *   - al login/switch: PULL del workspace → localStorage → re-render (se il
+ *     workspace è vuoto e il locale ha dati, il locale fa da seed → migrazione);
+ *   - ad ogni scrittura locale (Storage.set): PUSH snapshot della tabella, ma
+ *     solo se hai permesso "Modifica" su quella sezione (altrimenti la RLS
+ *     rifiuterebbe).
  *
- * Strategia di conflitto: last-write-wins a livello di tabella. Adatta a un
- * uso singolo-utente multi-dispositivo; per scenari multi-utente concorrenti
- * servirebbe una strategia più fine.
+ * Conflitti: last-write-wins per tabella.
  */
 const SupaSync = {
   userId: null,
@@ -20,42 +17,45 @@ const SupaSync = {
   _timers: {},
   _origStorageSet: null,
 
-  // key localStorage  ->  { table, toRow(app,uid), toApp(row) }
+  // key localStorage -> { table (= sezione), toRow(app, uid, ws), toApp(row) }
   MAP: {
     panel_assets: {
       table: 'assets',
-      toRow: (a, uid) => ({ id: a.id, user_id: uid, name: a.name || '', description: a.description || '', created_at: a.createdAt }),
+      toRow: (a, uid, ws) => ({ id: a.id, user_id: uid, workspace_id: ws, name: a.name || '', description: a.description || '', created_at: a.createdAt }),
       toApp: (r) => ({ id: r.id, name: r.name, description: r.description || '', createdAt: r.created_at })
     },
     panel_clients: {
       table: 'clients',
-      toRow: (c, uid) => ({ id: c.id, user_id: uid, nome: c.nome || '', link: c.link || '', asset_ids: Array.isArray(c.assets) ? c.assets : [], created_at: c.createdAt }),
+      toRow: (c, uid, ws) => ({ id: c.id, user_id: uid, workspace_id: ws, nome: c.nome || '', link: c.link || '', asset_ids: Array.isArray(c.assets) ? c.assets : [], created_at: c.createdAt }),
       toApp: (r) => ({ id: r.id, nome: r.nome, link: r.link, assets: r.asset_ids || [], createdAt: r.created_at })
     },
     panel_notes: {
       table: 'notes',
-      toRow: (n, uid) => ({ id: n.id, user_id: uid, text: n.text || '', created_at: n.createdAt }),
+      toRow: (n, uid, ws) => ({ id: n.id, user_id: uid, workspace_id: ws, text: n.text || '', created_at: n.createdAt }),
       toApp: (r) => ({ id: r.id, text: r.text, createdAt: r.created_at })
     },
     panel_tasks: {
       table: 'tasks',
-      toRow: (t, uid) => ({ id: t.id, user_id: uid, text: t.text || '', status: t.status || (t.completed ? 'done' : 'todo'), completed: !!t.completed, created_at: t.createdAt }),
+      toRow: (t, uid, ws) => ({ id: t.id, user_id: uid, workspace_id: ws, text: t.text || '', status: t.status || (t.completed ? 'done' : 'todo'), completed: !!t.completed, created_at: t.createdAt }),
       toApp: (r) => ({ id: r.id, text: r.text, status: r.status, completed: !!r.completed, createdAt: r.created_at })
     },
     panel_appointments: {
       table: 'appointments',
-      toRow: (a, uid) => ({ id: a.id, user_id: uid, date: a.date || null, description: a.description || '', type: a.type || 'remote', completed: !!a.completed, created_at: a.createdAt }),
+      toRow: (a, uid, ws) => ({ id: a.id, user_id: uid, workspace_id: ws, date: a.date || null, description: a.description || '', type: a.type || 'remote', completed: !!a.completed, created_at: a.createdAt }),
       toApp: (r) => ({ id: r.id, date: r.date || '', description: r.description, type: r.type, completed: !!r.completed, createdAt: r.created_at })
     }
   },
 
-  // Aggancia il wrapper su Storage.set per intercettare le scritture locali.
+  ws() { return (window.Workspace && Workspace.state.currentId) || null; },
+
   install() {
     if (!window.sb || !window.Storage || SupaSync._origStorageSet) return;
     SupaSync._origStorageSet = Storage.set.bind(Storage);
     Storage.set = function (key, value) {
       const okRes = SupaSync._origStorageSet(key, value);
-      if (!SupaSync._applyingRemote && SupaSync.userId && SupaSync.MAP[key]) {
+      const conf = SupaSync.MAP[key];
+      if (!SupaSync._applyingRemote && SupaSync.ws() && conf &&
+          window.Workspace && Workspace.canEdit(conf.table)) {
         SupaSync._schedulePush(key);
       }
       return okRes;
@@ -67,11 +67,12 @@ const SupaSync = {
     SupaSync._timers[key] = setTimeout(() => SupaSync.pushTable(key), 600);
   },
 
-  // Upsert delle righe locali + delete delle righe cloud non più presenti.
   async pushTable(key) {
     const conf = SupaSync.MAP[key];
-    if (!conf || !SupaSync.userId) return;
-    const rows = (Storage.get(key, []) || []).map(x => conf.toRow(x, SupaSync.userId));
+    const ws = SupaSync.ws();
+    if (!conf || !ws) return;
+    if (window.Workspace && !Workspace.canEdit(conf.table)) return; // sola lettura
+    const rows = (Storage.get(key, []) || []).map(x => conf.toRow(x, SupaSync.userId, ws));
     const ids = rows.map(r => r.id);
 
     if (rows.length) {
@@ -79,7 +80,7 @@ const SupaSync = {
       if (error) { console.error('[Sync] upsert', conf.table, error.message); return; }
     }
 
-    let del = window.sb.from(conf.table).delete().eq('user_id', SupaSync.userId);
+    let del = window.sb.from(conf.table).delete().eq('workspace_id', ws);
     if (ids.length) del = del.not('id', 'in', '(' + ids.join(',') + ')');
     const { error: delErr } = await del;
     if (delErr) console.error('[Sync] delete-missing', conf.table, delErr.message);
@@ -89,13 +90,16 @@ const SupaSync = {
     for (const key of Object.keys(SupaSync.MAP)) await SupaSync.pushTable(key);
   },
 
-  // Scarica tutte le tabelle e sovrascrive il localStorage (senza ritriggerare push).
+  // Scarica il workspace corrente in localStorage (senza ritriggerare push).
   async pull() {
+    const ws = SupaSync.ws();
+    if (!ws) return;
     SupaSync._applyingRemote = true;
     try {
       for (const [key, conf] of Object.entries(SupaSync.MAP)) {
         const { data, error } = await window.sb
-          .from(conf.table).select('*').order('created_at', { ascending: false });
+          .from(conf.table).select('*').eq('workspace_id', ws)
+          .order('created_at', { ascending: false });
         if (error) { console.error('[Sync] pull', conf.table, error.message); continue; }
         SupaSync._origStorageSet(key, (data || []).map(conf.toApp));
       }
@@ -110,33 +114,48 @@ const SupaSync = {
   },
 
   async _cloudIsEmpty() {
+    const ws = SupaSync.ws();
     for (const conf of Object.values(SupaSync.MAP)) {
       const { count, error } = await window.sb
-        .from(conf.table).select('id', { count: 'exact', head: true });
+        .from(conf.table).select('id', { count: 'exact', head: true }).eq('workspace_id', ws);
       if (!error && count > 0) return false;
     }
     return true;
   },
 
-  // Prima sincronizzazione dopo il login.
+  // Prima sincronizzazione dopo login/bootstrap del workspace.
   async initialSync(user) {
     SupaSync.userId = user.id;
-    if (await SupaSync._cloudIsEmpty() && SupaSync._localHasData()) {
-      await SupaSync.pushAll();   // seed: carica sul cloud i dati locali esistenti
+    if (!SupaSync.ws()) return;
+    // seed solo se sono io a poter scrivere (owner del nuovo spazio)
+    if (window.Workspace && Workspace.canEdit('notes') &&
+        await SupaSync._cloudIsEmpty() && SupaSync._localHasData()) {
+      await SupaSync.pushAll();
     }
-    await SupaSync.pull();        // allinea il locale al cloud
+    await SupaSync.pull();
   },
 
-  // Ridisegna le viste dell'app (se i moduli sono presenti).
+  // Cambio workspace: azzera il locale delle sezioni e ricarica dal nuovo spazio.
+  async switchWorkspace() {
+    SupaSync._applyingRemote = true;
+    try { Object.keys(SupaSync.MAP).forEach(k => SupaSync._origStorageSet(k, [])); }
+    finally { SupaSync._applyingRemote = false; }
+    await SupaSync.pull();
+  },
+
   _rerender() {
     try {
-      window.UI && UI.refreshClients && UI.refreshClients();
-      window.DOM && DOM.renderAssets && DOM.renderAssets();
-      window.DOM && DOM.renderNotes && DOM.renderNotes();
-      window.DOM && DOM.renderTasks && DOM.renderTasks();        // aggiorna anche la bacheca
-      window.DOM && DOM.renderAppointments && DOM.renderAppointments();
+      if (typeof UI !== 'undefined' && UI.refreshClients) UI.refreshClients();
+      if (typeof DOM !== 'undefined') {
+        DOM.renderAssets && DOM.renderAssets();
+        DOM.renderNotes && DOM.renderNotes();
+        DOM.renderTasks && DOM.renderTasks();
+        DOM.renderAppointments && DOM.renderAppointments();
+      }
     } catch (e) {
       console.error('[Sync] re-render', e);
     }
   }
 };
+
+window.SupaSync = SupaSync;

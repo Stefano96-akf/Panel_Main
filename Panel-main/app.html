@@ -112,6 +112,10 @@
           <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
           <span>Appuntamenti</span>
         </a>
+        <a href="#section-team" class="app-sidebar__link perm-hidden" data-nav-target="section-team" title="Collaboratori">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          <span>Collaboratori</span>
+        </a>
       </nav>
     </div>
   </aside>
@@ -364,6 +368,12 @@
         </section>
       </div>
     </section>
+
+    <!-- Pagina: Collaboratori (visibile solo ai membri di un workspace) -->
+    <section id="section-team" class="page panel perm-hidden" aria-labelledby="team-title">
+      <h2 id="team-title" class="panel__title">Collaboratori</h2>
+      <div id="teamContent" class="team"></div>
+    </section>
   </main>
 
   <!-- Toast Container -->
@@ -395,7 +405,9 @@
   <script src="supabase/config.js"></script>
   <script src="supabase/client.js"></script>
   <script src="supabase/auth.js"></script>
+  <script src="supabase/workspace.js"></script>
   <script src="supabase/sync.js"></script>
+  <script src="supabase/team.js"></script>
 
   <!-- Main App Script -->
   <script src="app.js"></script>
