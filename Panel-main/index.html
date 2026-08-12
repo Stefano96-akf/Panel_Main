@@ -5,29 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="Skelety — lo scheletro del tuo lavoro. Dashboard 100% client-side per elementi, asset, note, attività e appuntamenti.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="vendor/spacegrotesk/spacegrotesk.css">
   <title>Skelety — lo scheletro del tuo lavoro</title>
 </head>
 <body>
 <style>
-  /* ---------- TOKENS: tema unico "black blueprint" (solo nero) ---------- */
+  /* ---------- TOKENS: tema neo-brutalista (chiaro) ---------- */
   :root {
-    --bg: #05070d;          /* nero-navy profondo */
-    --bg-2: #090d16;
-    --surface: #0d1420;
-    --ink: #eaeff8;
-    --ink-soft: #aab8d0;
-    --muted: #6f7f9a;
-    --line: #1b2740;
-    --line-strong: #29385a;
-    --accent: #4d8bff;
-    --accent-2: #8b8ef7;
-    --node: 77, 139, 255;      /* rgb per il canvas */
-    --grid: rgba(77, 139, 255, .05);
-    --glow: rgba(77, 139, 255, .22);
-    --shadow: 0 24px 60px rgba(0, 0, 0, .6);
+    --bg: #F3F3F3;          /* fondo pagina */
+    --bg-2: #FFFFFF;
+    --surface: #FFFFFF;
+    --ink: #191A23;         /* testo principale (scuro) */
+    --ink-soft: #3c3e48;
+    --muted: #6f7280;
+    --line: rgba(25, 26, 35, .16);
+    --line-strong: rgba(25, 26, 35, .34);
+    --accent: #191A23;      /* accento forte: testo/icone/focus */
+    --lime: #B9FF66;        /* highlight neo-brutalista */
+    --accent-2: #191A23;
+    --node: 25, 26, 35;     /* rgb per il canvas (nodi scuri su chiaro) */
+    --grid: rgba(25, 26, 35, .05);
+    --glow: rgba(185, 255, 102, .5);
+    --shadow: 0 4px 0 0 #191A23;   /* ombra piatta neo */
 
-    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Space Grotesk", ui-monospace, Menlo, Consolas, monospace;
+    --sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --maxw: 1120px;
   }
 
@@ -84,19 +86,21 @@
 
   .btn {
     display: inline-flex; align-items: center; gap: 9px;
-    font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
-    padding: 11px 18px; border-radius: 9px; cursor: pointer;
-    border: 1px solid transparent; white-space: nowrap;
+    font-family: var(--sans); font-weight: 600; font-size: 13px; letter-spacing: .02em;
+    padding: 12px 20px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--ink); white-space: nowrap;
     transition: transform .12s ease, box-shadow .18s ease, background .18s, border-color .18s, color .18s;
   }
   .btn--primary {
-    background: var(--accent); color: #fff;
-    box-shadow: 0 8px 22px var(--glow);
+    background: var(--lime); color: var(--ink);
+    box-shadow: var(--shadow);
   }
-  .btn--primary:hover { transform: translateY(-1px); box-shadow: 0 12px 30px var(--glow); }
-  .btn--ghost { color: var(--ink); border-color: var(--line-strong); background: transparent; }
-  .btn--ghost:hover { border-color: var(--accent); color: var(--accent); }
-  .btn--lg { padding: 15px 24px; font-size: 14px; }
+  .btn--primary:hover { transform: translateY(-1px); box-shadow: 0 6px 0 0 #191A23; }
+  .btn--primary:active { transform: translateY(3px); box-shadow: 0 2px 0 0 #191A23; }
+  .btn--ghost { color: var(--ink); border-color: var(--ink); background: transparent; box-shadow: var(--shadow); }
+  .btn--ghost:hover { background: var(--ink); color: #fff; }
+  .btn--ghost:active { transform: translateY(3px); box-shadow: 0 2px 0 0 #191A23; }
+  .btn--lg { padding: 15px 26px; font-size: 14px; }
 
   /* ---------- HERO ---------- */
   .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
@@ -116,7 +120,7 @@
   }
   .hero__title {
     font-family: var(--sans);
-    font-weight: 800;
+    font-weight: 700;
     font-size: clamp(44px, 8vw, 92px);
     line-height: 0.98;
     letter-spacing: -0.03em;
@@ -124,7 +128,7 @@
     max-width: 14ch;
     text-wrap: balance;
   }
-  .hero__title b { color: var(--accent); font-weight: 800; }
+  .hero__title b { color: var(--ink); font-weight: 700; background: var(--lime); border-radius: 8px; padding: 0 .14em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .hero__lead {
     font-size: clamp(17px, 2.2vw, 21px);
     color: var(--ink-soft);
@@ -149,9 +153,9 @@
     animation: floaty 5.5s ease-in-out infinite;
     pointer-events: none;
   }
-  .hero__mascot .bone { fill: #e9eef8; stroke: #c3ccdd; stroke-width: 1.2; }
-  .hero__mascot .socket { fill: var(--bg); }
-  .hero__mascot .glint { fill: var(--accent); }
+  .hero__mascot .bone { fill: #ffffff; stroke: #191A23; stroke-width: 2; }
+  .hero__mascot .socket { fill: #191A23; }
+  .hero__mascot .glint { fill: var(--lime); }
   .hero__mascot .wave { transform-box: fill-box; transform-origin: 50% 92%; animation: wave 2.8s ease-in-out infinite; }
   @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
   @keyframes wave { 0%, 55%, 100% { transform: rotate(0deg); } 15% { transform: rotate(-18deg); } 32% { transform: rotate(8deg); } 48% { transform: rotate(-18deg); } }
@@ -161,7 +165,7 @@
   .section { padding: clamp(64px, 10vw, 110px) 0; }
   .section-head { margin-bottom: clamp(32px, 5vw, 52px); max-width: 40ch; }
   .section-head h2 {
-    font-family: var(--sans); font-weight: 800;
+    font-family: var(--sans); font-weight: 700;
     font-size: clamp(28px, 4.5vw, 44px); letter-spacing: -0.02em; line-height: 1.05;
     margin: 0; text-wrap: balance;
   }
@@ -181,7 +185,7 @@
     padding: 30px 26px 32px;
     transition: background .2s;
   }
-  .mcard:hover { background: color-mix(in srgb, var(--surface) 90%, var(--accent)); }
+  .mcard:hover { background: color-mix(in srgb, var(--surface) 86%, var(--lime)); }
   /* corner tick da disegno tecnico */
   .mcard::before, .mcard::after {
     content: ""; position: absolute; width: 12px; height: 12px;
@@ -207,13 +211,13 @@
     padding: clamp(40px, 6vw, 64px) 0;
   }
   .stat__k { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
-  .stat__v { font-family: var(--sans); font-weight: 800; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.02em; margin: 8px 0 6px; }
+  .stat__v { font-family: var(--sans); font-weight: 700; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.02em; margin: 8px 0 6px; }
   .stat__d { color: var(--muted); font-size: 13.5px; }
 
   /* ---------- CTA BAND ---------- */
   .cta-band { text-align: center; padding: clamp(70px, 11vw, 120px) 0; position: relative; overflow: hidden; }
   .cta-band h2 {
-    font-family: var(--sans); font-weight: 800; letter-spacing: -.025em;
+    font-family: var(--sans); font-weight: 700; letter-spacing: -.025em;
     font-size: clamp(30px, 6vw, 60px); line-height: 1.02; margin: 0 0 12px; text-wrap: balance;
   }
   .cta-band p { color: var(--ink-soft); margin: 0 0 30px; font-size: 17px; }
@@ -284,8 +288,8 @@
     <svg class="hero__mascot" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scheletrino mascotte che saluta">
       <defs>
         <radialGradient id="mglow" cx="50%" cy="42%" r="55%">
-          <stop offset="0" stop-color="#4d8bff" stop-opacity=".38"/>
-          <stop offset="1" stop-color="#4d8bff" stop-opacity="0"/>
+          <stop offset="0" stop-color="#B9FF66" stop-opacity=".65"/>
+          <stop offset="1" stop-color="#B9FF66" stop-opacity="0"/>
         </radialGradient>
       </defs>
       <ellipse cx="100" cy="98" rx="94" ry="98" fill="url(#mglow)"/>
@@ -303,7 +307,7 @@
       <!-- spina dorsale -->
       <rect class="bone" x="94.5" y="150" width="11" height="66" rx="5.5"/>
       <!-- costole -->
-      <g stroke="#c3ccdd" stroke-width="6" stroke-linecap="round" fill="none">
+      <g stroke="#191A23" stroke-width="6" stroke-linecap="round" fill="none">
         <path d="M100 162 q-26 4 -24 20"/>
         <path d="M100 178 q-24 4 -22 19"/>
         <path d="M100 194 q-20 4 -18 17"/>
@@ -323,7 +327,7 @@
       <!-- naso -->
       <path class="socket" d="M100 96 l-6 11 h12 z"/>
       <!-- denti -->
-      <g stroke="#aab6cc" stroke-width="2" stroke-linecap="round">
+      <g stroke="#191A23" stroke-width="2" stroke-linecap="round">
         <line x1="88" y1="121" x2="88" y2="140"/>
         <line x1="96" y1="121" x2="96" y2="142"/>
         <line x1="104" y1="121" x2="104" y2="142"/>
