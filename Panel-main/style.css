@@ -2142,8 +2142,9 @@ html.dark .kanban__list.is-over {
   padding: 10px 12px;
   transition: border-color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out);
 }
-.profile-chip:hover { border-color: var(--color-text-muted); }
+.profile-chip:hover { border-color: var(--color-text-muted); background: var(--color-surface); color: var(--color-text-primary); }
 .profile-chip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.profile-chip.is-active { background: var(--color-primary-light); border-color: var(--color-accent); box-shadow: none; color: var(--color-text-primary); }
 .profile-chip__ava {
   flex: none; width: 34px; height: 34px; border-radius: 999px;
   display: grid; place-items: center; font-weight: 700; font-size: 14px;
@@ -2157,35 +2158,28 @@ body.sidebar-collapsed .profile-chip { justify-content: center; padding: 8px; }
 body.sidebar-collapsed .profile-chip__meta,
 body.sidebar-collapsed .profile-chip > i { display: none; }
 
-/* overlay */
-.profile-overlay { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: 20px; }
-.profile-overlay__backdrop { position: absolute; inset: 0; background: rgba(25, 26, 35, 0.55); backdrop-filter: blur(2px); }
-.profile-card {
-  position: relative; z-index: 1; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto;
-  background: var(--color-bg-primary); border: 1px solid var(--color-border);
-  border-radius: 16px; box-shadow: var(--shadow-xl);
-  animation: fadeIn var(--duration-normal) var(--ease-out);
+/* sezione profilo */
+.profile { max-width: 900px; }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 4px; }
+.profile-block {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: 20px 22px;
 }
-.profile-card__head {
-  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-primary);
-}
-.profile-card__head h2 { margin: 0; font-size: var(--font-size-2xl); }
-.profile-card__body { padding: 4px 20px 20px; }
-.profile-sec { padding: 16px 0; border-bottom: 1px solid var(--color-border); }
-.profile-sec:last-child { border-bottom: none; }
-.profile-sec__title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin: 0 0 12px; }
-.profile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
+.profile-block--wide { grid-column: 1 / -1; }
+@media (max-width: 720px) { .profile-grid { grid-template-columns: 1fr; } }
+.profile-sec__title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin: 0 0 14px; }
+.profile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--color-border); }
+.profile-row:last-of-type { border-bottom: none; }
 .profile-row > span { color: var(--color-text-secondary); flex: none; }
 .profile-row > b { color: var(--color-text-primary); text-align: right; word-break: break-word; }
-.profile-logout { margin-top: 14px; }
-.profile-hint { font-size: 13px; color: var(--color-text-muted); margin: 0 0 10px; }
+.profile-logout { margin-top: 16px; }
+.profile-hint { font-size: 13px; color: var(--color-text-muted); margin: 0 0 12px; }
 .profile-msg { font-size: 13px; margin: 8px 0 0; min-height: 1em; }
 .profile-msg.is-ok { color: var(--color-success); }
 .profile-msg.is-err { color: var(--color-danger); }
 .profile-refer { display: flex; gap: 8px; }
 .profile-refer .input { flex: 1; min-width: 0; }
-.profile-refer__actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.profile-refer__actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
 /* ============================================================================
    FOOTER applicazione

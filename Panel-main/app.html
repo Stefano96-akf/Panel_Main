@@ -118,6 +118,14 @@
           <span>Collaboratori</span>
         </a>
       </nav>
+      <a href="#section-profile" class="app-sidebar__link profile-chip perm-hidden" id="profileChip" data-nav-target="section-profile" aria-label="Profilo e account">
+        <span class="profile-chip__ava" id="profileChipAva">?</span>
+        <span class="profile-chip__meta">
+          <span class="profile-chip__email" id="profileChipEmail">Profilo</span>
+          <span class="profile-chip__hint">Profilo e account</span>
+        </span>
+        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+      </a>
     </div>
   </aside>
   <!-- Main Container: ogni sezione è una "pagina" mostrata singolarmente -->
@@ -374,6 +382,12 @@
     <section id="section-team" class="page panel perm-hidden" aria-labelledby="team-title">
       <h2 id="team-title" class="panel__title">Collaboratori</h2>
       <div id="teamContent" class="team"></div>
+    </section>
+
+    <!-- Pagina: Profilo (visibile solo dopo il login) -->
+    <section id="section-profile" class="page panel" aria-labelledby="profile-title">
+      <h2 id="profile-title" class="panel__title">Profilo</h2>
+      <div id="profileContent" class="profile"></div>
     </section>
   </main>
 

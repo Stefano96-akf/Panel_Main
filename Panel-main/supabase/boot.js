@@ -128,12 +128,12 @@
         await SupaSync.initialSync(user);  // dati del workspace corrente
         SkeletyGate.applyPermissions();    // sezioni per permesso
         if (window.Team) await Team.render();
-        if (window.Profile) Profile.mountChip(user);
+        if (window.Profile) Profile.mount(user);
       } catch (e) { console.error('[boot]', e); }
     } else {
       SupaSync.userId = null;
       if (window.Workspace) Workspace.state.currentId = null;
-      if (window.Profile) Profile.unmountChip();
+      if (window.Profile) Profile.unmount();
       unmountLogout();
       showGate(true);
     }
