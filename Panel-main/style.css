@@ -2130,3 +2130,76 @@ html.dark .kanban__list.is-over {
   animation: fadeIn var(--duration-normal) var(--ease-in-out);
 }
 
+/* ============================================================================
+   PROFILO — chip in fondo alla sidebar + overlay account
+   ============================================================================ */
+.profile-chip {
+  margin-top: auto;                 /* spinge il chip in fondo alla sidebar */
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  text-align: left; cursor: pointer; font-family: inherit;
+  background: var(--color-surface); color: var(--color-text-primary);
+  border: 1px solid var(--color-border); border-radius: 12px;
+  padding: 10px 12px;
+  transition: border-color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out);
+}
+.profile-chip:hover { border-color: var(--color-text-muted); }
+.profile-chip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.profile-chip__ava {
+  flex: none; width: 34px; height: 34px; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 700; font-size: 14px;
+  background: var(--color-accent); color: #191a23;
+}
+.profile-chip__meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.profile-chip__email { font-size: 13px; font-weight: 600; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-chip__hint { font-size: 11px; color: var(--color-text-muted); }
+.profile-chip > i { margin-left: auto; color: var(--color-text-muted); font-size: 13px; }
+body.sidebar-collapsed .profile-chip { justify-content: center; padding: 8px; }
+body.sidebar-collapsed .profile-chip__meta,
+body.sidebar-collapsed .profile-chip > i { display: none; }
+
+/* overlay */
+.profile-overlay { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: 20px; }
+.profile-overlay__backdrop { position: absolute; inset: 0; background: rgba(25, 26, 35, 0.55); backdrop-filter: blur(2px); }
+.profile-card {
+  position: relative; z-index: 1; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto;
+  background: var(--color-bg-primary); border: 1px solid var(--color-border);
+  border-radius: 16px; box-shadow: var(--shadow-xl);
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+.profile-card__head {
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-primary);
+}
+.profile-card__head h2 { margin: 0; font-size: var(--font-size-2xl); }
+.profile-card__body { padding: 4px 20px 20px; }
+.profile-sec { padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.profile-sec:last-child { border-bottom: none; }
+.profile-sec__title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin: 0 0 12px; }
+.profile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
+.profile-row > span { color: var(--color-text-secondary); flex: none; }
+.profile-row > b { color: var(--color-text-primary); text-align: right; word-break: break-word; }
+.profile-logout { margin-top: 14px; }
+.profile-hint { font-size: 13px; color: var(--color-text-muted); margin: 0 0 10px; }
+.profile-msg { font-size: 13px; margin: 8px 0 0; min-height: 1em; }
+.profile-msg.is-ok { color: var(--color-success); }
+.profile-msg.is-err { color: var(--color-danger); }
+.profile-refer { display: flex; gap: 8px; }
+.profile-refer .input { flex: 1; min-width: 0; }
+.profile-refer__actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* ============================================================================
+   FOOTER applicazione
+   ============================================================================ */
+.app-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  max-width: 1040px; margin: 16px auto 0; padding: 20px clamp(16px, 4vw, 32px) 28px;
+  border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 13px;
+}
+.app-footer__brand { display: flex; flex-direction: column; gap: 2px; }
+.app-footer__logo { font-weight: 700; font-size: 15px; color: var(--color-text-primary); }
+.app-footer__tag { color: var(--color-text-muted); }
+.app-footer__meta { display: flex; align-items: center; gap: 10px; }
+.app-footer__link { color: var(--color-text-secondary); }
+.app-footer__link:hover { color: var(--color-text-primary); text-decoration: underline; text-underline-offset: 3px; }
+.app-footer__sep { color: var(--color-text-muted); }
+

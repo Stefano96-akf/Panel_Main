@@ -215,3 +215,25 @@ language sql stable security definer set search_path = public as $$
   where m.workspace_id = ws and public.is_member(ws)
   order by m.created_at;
 $$;
+
+-- ============================================================================
+-- PARTE 3 · Hardening (riduce l'attacco/warning degli advisor)
+-- ============================================================================
+
+-- role_perm è pura (nessun accesso a tabelle): fissiamo comunque il search_path.
+alter function public.role_perm(public.member_role, text) set search_path = public;
+
+-- Funzioni NON destinate all'API (trigger / event-trigger): niente EXECUTE via REST.
+-- Il firing di trigger/event-trigger NON richiede il privilegio EXECUTE del chiamante,
+-- quindi revocarlo non ne altera il funzionamento.
+revoke execute on function public.add_owner_membership() from public, anon, authenticated;
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+
+-- RPC richiamate SOLO da utenti loggati: via l'accesso anon, resta authenticated.
+revoke execute on function public.accept_invitations() from public, anon;
+grant  execute on function public.accept_invitations() to authenticated;
+revoke execute on function public.workspace_members_emails(uuid) from public, anon;
+grant  execute on function public.workspace_members_emails(uuid) to authenticated;
+
+-- Nota: is_member/is_admin/can_edit/perm restano eseguibili da authenticated (necessari
+-- alla RLS) e rivelano solo informazioni sull'accesso del chiamante stesso.

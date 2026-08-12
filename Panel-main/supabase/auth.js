@@ -34,6 +34,12 @@ const SupaAuth = {
     return window.sb.auth.signOut();
   },
 
+  // Aggiorna la password dell'utente loggato.
+  async updatePassword(newPassword) {
+    if (!window.sb) return { error: { message: 'Supabase non configurato' } };
+    return window.sb.auth.updateUser({ password: newPassword });
+  },
+
   // Notifica ad ogni cambio di sessione (login/logout/refresh token).
   onChange(callback) {
     if (!window.sb) return { data: { subscription: { unsubscribe() {} } } };

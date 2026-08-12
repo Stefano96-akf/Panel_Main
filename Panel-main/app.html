@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Skelety - Dashboard gestione elementi, link, note, attività e appuntamenti (100% client-side)">
+  <meta name="description" content="Skelety - Dashboard gestione elementi, link, note, attività e appuntamenti (sincronizzato nel cloud)">
   <title>Skelety</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
@@ -377,6 +377,19 @@
     </section>
   </main>
 
+  <!-- Footer applicazione -->
+  <footer class="app-footer">
+    <div class="app-footer__brand">
+      <span class="app-footer__logo">Skelety</span>
+      <span class="app-footer__tag">Lo scheletro del tuo lavoro · sincronizzato nel cloud</span>
+    </div>
+    <nav class="app-footer__meta" aria-label="Link footer">
+      <a href="index.html" class="app-footer__link">Home</a>
+      <span class="app-footer__sep" aria-hidden="true">·</span>
+      <span>© 2026 Skelety</span>
+    </nav>
+  </footer>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
@@ -409,6 +422,7 @@
   <script src="supabase/workspace.js"></script>
   <script src="supabase/sync.js"></script>
   <script src="supabase/team.js"></script>
+  <script src="supabase/profile.js"></script>
 
   <!-- Main App Script -->
   <script src="app.js"></script>
