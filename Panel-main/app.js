@@ -708,26 +708,36 @@ const Modal = {
   },
 
   setupEventListeners() {
-    const backdrop = Modal.element.querySelector('.modal__backdrop');
-    const closeBtn = Modal.element.querySelector('[data-modal-close]');
     const cancelBtn = document.getElementById('modalCancel');
     const saveBtn = document.getElementById('modalSave');
 
-    backdrop?.addEventListener('click', () => Modal.close());
-    closeBtn?.addEventListener('click', () => Modal.close());
+    // Chiude su OGNI elemento con data-modal-close (backdrop + 'x' dell'header):
+    // prima si legava solo il primo match, così la 'x' non funzionava.
+    Modal.element.querySelectorAll('[data-modal-close]').forEach((el) =>
+      el.addEventListener('click', () => Modal.close())
+    );
     cancelBtn?.addEventListener('click', () => Modal.close());
     saveBtn?.addEventListener('click', () => Modal.handleSave());
   },
 
-  open(title, content, onSaveCallback) {
+  open(title, content, onSaveCallback, options) {
+    options = options || {};
     Modal.onSave = onSaveCallback;
     Modal.previousActiveElement = document.activeElement;
-    
+
     const titleEl = Modal.element.querySelector('#modalTitle');
     const bodyEl = document.getElementById('modalBody');
+    const saveBtn = document.getElementById('modalSave');
 
     titleEl.textContent = title;
     bodyEl.innerHTML = content;
+
+    // Bottone di conferma: reset ai default, poi eventuale override per-modale
+    // (es. eliminazioni → "Conferma" in stile pericolo, non "Salva").
+    if (saveBtn) {
+      saveBtn.textContent = options.confirmLabel || 'Salva';
+      saveBtn.classList.toggle('btn--danger', !!options.danger);
+    }
 
     Modal.element.setAttribute('aria-hidden', 'false');
     Modal.element.classList.add('show');
@@ -1883,7 +1893,7 @@ const AlertDialog = {
         onConfirm();
       }
       return true;
-    });
+    }, { confirmLabel: 'Conferma', danger: true });
   }
 };
 // ============================================================================
