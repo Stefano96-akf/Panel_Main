@@ -65,3 +65,13 @@ create policy tasks_write on public.tasks for all
 -- richiede EXECUTE del chiamante, quindi la revoca è sicura.
 revoke execute on function public.board_add_creator() from public, anon, authenticated;
 revoke execute on function public.boards_limit()      from public, anon, authenticated;
+
+-- ---------- PARTE D · fix creazione bacheca (APPLICATA) ----------
+-- La INSERT...RETURNING (usata da .select().single() del client) applica la
+-- SELECT policy alla riga appena creata PRIMA che il trigger AFTER INSERT
+-- aggiunga il creatore a board_members → is_board_member(id) è ancora false e la
+-- RETURNING viene rifiutata con 403. Il creatore deve poter sempre leggere la
+-- propria bacheca: aggiungiamo `created_by = auth.uid()` alla read policy.
+drop policy if exists boards_read on public.boards;
+create policy boards_read on public.boards for select
+  using (public.is_board_member(id) or created_by = auth.uid());
