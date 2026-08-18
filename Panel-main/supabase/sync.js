@@ -26,8 +26,14 @@ const SupaSync = {
     },
     panel_clients: {
       table: 'clients',
-      toRow: (c, uid, ws) => ({ id: c.id, user_id: uid, workspace_id: ws, nome: c.nome || '', link: c.link || '', asset_ids: Array.isArray(c.assets) ? c.assets : [], created_at: c.createdAt }),
-      toApp: (r) => ({ id: r.id, nome: r.nome, link: r.link, assets: r.asset_ids || [], createdAt: r.created_at })
+      toRow: (c, uid, ws) => ({ id: c.id, user_id: uid, workspace_id: ws, nome: c.nome || '', link: c.link || '', asset_ids: Array.isArray(c.assets) ? c.assets : [], group_id: c.groupId || null, created_at: c.createdAt }),
+      toApp: (r) => ({ id: r.id, nome: r.nome, link: r.link, assets: r.asset_ids || [], groupId: r.group_id || null, createdAt: r.created_at })
+    },
+    panel_groups: {
+      table: 'groups',
+      section: 'clients', // i gruppi appartengono alla sezione Elementi (permesso "clients")
+      toRow: (g, uid, ws) => ({ id: g.id, user_id: uid, workspace_id: ws, name: g.name || '', parent_id: g.parentId || null, created_at: g.createdAt }),
+      toApp: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id || null, createdAt: r.created_at })
     },
     panel_notes: {
       table: 'notes',
@@ -58,7 +64,7 @@ const SupaSync = {
       const okRes = SupaSync._origStorageSet(key, value);
       const conf = SupaSync.MAP[key];
       if (!SupaSync._applyingRemote && SupaSync.ws() && conf &&
-          window.Workspace && Workspace.canEdit(conf.table)) {
+          window.Workspace && Workspace.canEdit(conf.section || conf.table)) {
         SupaSync._schedulePush(key);
       }
       return okRes;
@@ -74,7 +80,7 @@ const SupaSync = {
     const conf = SupaSync.MAP[key];
     const ws = SupaSync.ws();
     if (!conf || !ws) return;
-    if (window.Workspace && !Workspace.canEdit(conf.table)) return; // sola lettura
+    if (window.Workspace && !Workspace.canEdit(conf.section || conf.table)) return; // sola lettura
     let rows = (Storage.get(key, []) || []).map(x => conf.toRow(x, SupaSync.userId, ws));
     if (conf.filter) rows = rows.filter(conf.filter);
     const ids = rows.map(r => r.id);
@@ -160,6 +166,7 @@ const SupaSync = {
 
   _rerender() {
     try {
+      if (typeof UI !== 'undefined' && UI.renderGroupFilter) UI.renderGroupFilter();
       if (typeof UI !== 'undefined' && UI.refreshClients) UI.refreshClients();
       if (typeof DOM !== 'undefined') {
         DOM.renderAssets && DOM.renderAssets();

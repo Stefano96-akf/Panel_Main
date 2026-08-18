@@ -2215,7 +2215,7 @@ html.dark .kanban__list.is-over {
   color: var(--color-text-muted);
   cursor: pointer;
   font-size: var(--font-size-xs);
-  opacity: 0;
+  opacity: 0.6;
   transition: background-color var(--duration-fast) var(--ease-in-out),
               color var(--duration-fast) var(--ease-in-out),
               opacity var(--duration-fast) var(--ease-in-out);
@@ -2234,10 +2234,6 @@ html.dark .kanban__list.is-over {
 .kanban__coltool--danger:hover {
   background: rgba(239, 68, 68, 0.12);
   color: var(--color-danger);
-}
-
-@media (hover: none) {
-  .kanban__coltool { opacity: 1; }
 }
 
 /* Modale gestione accesso per-bacheca */
@@ -2299,6 +2295,131 @@ html.dark .kanban__list.is-over {
   color: var(--color-text-muted);
   cursor: not-allowed;
   text-decoration: line-through;
+}
+
+/* ============================================================================
+   ELEMENTI — gruppi/cartelle, filtri, import, viste (Personalizza)
+   ============================================================================ */
+
+/* Header sezione con controllo "Personalizza" */
+.panel__header--clients {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+.clients-personalize {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.clients-personalize__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.clients-personalize__select { width: auto; min-width: 130px; }
+
+/* Filtro per gruppo + gestisci gruppi */
+.clients-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+.clients-filters__field { flex: 1; margin-bottom: 0; }
+.clients-filters__manage { white-space: nowrap; }
+
+/* Badge gruppo sull'elemento */
+.client-item__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-xs);
+}
+.client-item__date { margin-top: 0; }
+.client-item__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+.client-item__group i { font-size: 0.8em; opacity: 0.8; }
+
+/* --- Vista "Affiancata": controlli a sinistra, lista a destra --- */
+.clients-view--affiancata .clients-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: var(--spacing-xl);
+  align-items: start;
+}
+.clients-view--affiancata .clients-layout__controls {
+  position: sticky;
+  top: var(--spacing-md);
+}
+@media (max-width: 900px) {
+  .clients-view--affiancata .clients-layout { grid-template-columns: 1fr; }
+  .clients-view--affiancata .clients-layout__controls { position: static; }
+}
+
+/* --- Vista "Compatta": righe dense --- */
+.clients-view--compatta .client-item { padding: var(--spacing-sm) var(--spacing-md); }
+.clients-view--compatta .client-item:hover { transform: none; }
+.clients-view--compatta .client-item__meta,
+.clients-view--compatta .asset-badges { display: none; }
+.clients-view--compatta .clients-list { gap: var(--spacing-xs); }
+
+/* Gestione gruppi (modale) */
+.group-manager__add {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+.group-manager__add .input { flex: 1; }
+.group-manager__list {
+  list-style: none;
+  margin: 0 0 var(--spacing-sm);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.group-manager__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+}
+.group-manager__row--sub {
+  padding-left: var(--spacing-xl);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.group-manager__name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  word-break: break-word;
+}
+.group-manager__tools { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.group-manager__tools .kanban__coltool { opacity: 0.7; }
+.group-manager__empty {
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 /* ============================================================================

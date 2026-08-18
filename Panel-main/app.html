@@ -132,64 +132,86 @@
   <main class="container" role="main">
 
     <!-- Pagina: Elementi & Link -->
-    <section id="section-clients" class="page panel is-active" aria-labelledby="clients-title">
-      <div class="panel__header">
+    <section id="section-clients" class="page panel is-active clients-view clients-view--comoda" aria-labelledby="clients-title">
+      <div class="panel__header panel__header--clients">
         <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
-      </div>
-
-      <!-- Search Box -->
-      <div class="form-group">
-        <label for="clientSearch" class="label">Cerca..</label>
-        <input
-          type="text"
-          id="clientSearch"
-          class="input"
-          placeholder="Digita nome o link..."
-          aria-label="Cerca..."
-        >
-      </div>
-
-      <!-- Add Client Form -->
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="clientName" class="label">Attributo</label>
-          <input
-            type="text"
-            id="clientName"
-            class="input"
-            placeholder="Es. Sito Web"
-          >
-        </div>
-        <div class="form-group">
-          <label for="clientLink" class="label">Link:</label>
-          <input
-            type="url"
-            id="clientLink"
-            class="input"
-            placeholder="https://www.esempio.com"
-          >
+        <div class="clients-personalize">
+          <label for="clientsViewSelect" class="clients-personalize__label">
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Personalizza
+          </label>
+          <select id="clientsViewSelect" class="input clients-personalize__select" aria-label="Personalizza vista">
+            <option value="comoda">Comoda</option>
+            <option value="compatta">Compatta</option>
+            <option value="affiancata">Affiancata</option>
+          </select>
         </div>
       </div>
 
-      <div class="button-group">
-        <button id="addClientBtn" class="btn btn--primary">
-          <i class="fa-solid fa-plus"></i> Aggiungi Elemento
-        </button>
-        <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
-          <i class="fa-solid fa-layer-group"></i> Crea Asset
-        </button>
-      </div>
+      <div class="clients-layout">
+        <div class="clients-layout__controls">
+          <!-- Search Box -->
+          <div class="form-group">
+            <label for="clientSearch" class="label">Cerca..</label>
+            <input
+              type="text"
+              id="clientSearch"
+              class="input"
+              placeholder="Digita nome o link..."
+              aria-label="Cerca..."
+            >
+          </div>
 
-      <!-- Clients List -->
-      <div id="clientsList" class="clients-list" aria-live="polite" aria-label="Elenco elementi">
-        <!-- Clients rendered here -->
-      </div>
+          <!-- Filtro per gruppo -->
+          <div class="clients-filters">
+            <div class="form-group clients-filters__field">
+              <label for="clientGroupFilter" class="label">Gruppo</label>
+              <select id="clientGroupFilter" class="input" aria-label="Filtra per gruppo">
+                <option value="all">Tutti i gruppi</option>
+              </select>
+            </div>
+            <button id="manageGroupsBtn" type="button" class="btn btn--secondary btn--small clients-filters__manage">
+              <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Gestisci gruppi
+            </button>
+          </div>
 
-      <!-- Export -->
-      <div class="action-row">
-        <button id="exportClientsBtn" class="btn btn--secondary btn--small">
-          <i class="fa-solid fa-download"></i> Esporta CSV
-        </button>
+          <!-- Add Client Form -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="clientName" class="label">Attributo</label>
+              <input type="text" id="clientName" class="input" placeholder="Es. Sito Web">
+            </div>
+            <div class="form-group">
+              <label for="clientLink" class="label">Link:</label>
+              <input type="url" id="clientLink" class="input" placeholder="https://www.esempio.com">
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button id="addClientBtn" class="btn btn--primary">
+              <i class="fa-solid fa-plus"></i> Aggiungi Elemento
+            </button>
+            <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
+              <i class="fa-solid fa-layer-group"></i> Crea Asset
+            </button>
+          </div>
+        </div>
+
+        <div class="clients-layout__list">
+          <!-- Clients List -->
+          <div id="clientsList" class="clients-list" aria-live="polite" aria-label="Elenco elementi">
+            <!-- Clients rendered here -->
+          </div>
+
+          <!-- Import / Export -->
+          <div class="action-row">
+            <button id="importClientsBtn" class="btn btn--secondary btn--small">
+              <i class="fa-solid fa-inbox"></i> Importa CSV
+            </button>
+            <button id="exportClientsBtn" class="btn btn--secondary btn--small">
+              <i class="fa-solid fa-download"></i> Esporta CSV
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -23,11 +23,13 @@ const Storage = {
     tasks: 'panel_tasks',
     appointments: 'panel_appointments',
     assets: 'panel_assets',
+    groups: 'panel_groups',
     boards: 'panel_boards',
     currentBoard: 'panel_current_board',
     darkMode: 'panel_dark_mode',
     layoutExpanded: 'panel_layout_expanded',
     sidebarCollapsed: 'panlink_sidebar_collapsed',
+    clientsView: 'panel_clients_view',
   },
 
   get(key, defaultValue = []) {
@@ -215,6 +217,38 @@ const Utils = {
   getCurrentDateString() {
     const now = new Date();
     return now.toISOString().split('T')[0];
+  },
+
+  // Parser CSV tollerante (virgolette, "" escaped, CRLF/LF). `delim` = separatore.
+  csvParse(text, delim) {
+    text = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const rows = []; let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false;
+        } else field += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === delim) { row.push(field); field = ''; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += ch;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  },
+
+  // CSV → array di oggetti chiavati dall'intestazione. Autorileva separatore , o ;
+  csvToArray(text) {
+    text = String(text || '');
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+    const rows = Utils.csvParse(text, delim);
+    if (!rows.length) return [];
+    const headers = rows[0].map(h => (h || '').trim());
+    return rows.slice(1)
+      .filter(r => r.some(v => (v || '').trim() !== ''))
+      .map(r => { const o = {}; headers.forEach((h, i) => { o[h] = (r[i] != null ? r[i] : '').trim(); }); return o; });
   }
 };
 
@@ -229,6 +263,7 @@ const Clients = {
       nome: client.nome || client.name || '',
       link: client.link || '',
       assets: Array.isArray(client.assets) ? client.assets : [],
+      groupId: client.groupId || null,
       createdAt: client.createdAt || new Date().toISOString()
     };
   },
@@ -242,13 +277,14 @@ const Clients = {
     return Storage.set(Storage.keys.clients, clientsList.map(Clients.normalize));
   },
 
-  add(nome, link, assets = []) {
+  add(nome, link, assets = [], groupId = null) {
     const clients = Clients.getAll();
     const newClient = {
       id: Utils.generateId(),
       nome,
       link,
       assets: assets || [],
+      groupId: groupId || null,
       createdAt: new Date().toISOString()
     };
     clients.unshift(newClient);
@@ -256,11 +292,13 @@ const Clients = {
     return newClient;
   },
 
-  update(id, nome, link, assets = []) {
+  update(id, nome, link, assets = [], groupId = undefined) {
     const clients = Clients.getAll();
     const index = clients.findIndex(c => c.id === id);
     if (index === -1) return false;
-    clients[index] = { ...clients[index], nome, link, assets: assets || [] };
+    const patch = { nome, link, assets: assets || [] };
+    if (groupId !== undefined) patch.groupId = groupId || null;
+    clients[index] = { ...clients[index], ...patch };
     Clients.save(clients);
     return true;
   },
@@ -272,25 +310,153 @@ const Clients = {
     return true;
   },
 
-  search(query) {
+  // Assegna un elemento a un gruppo/sotto-gruppo (o null = senza gruppo)
+  setGroup(id, groupId) {
     const clients = Clients.getAll();
+    const c = clients.find(x => x.id === id);
+    if (!c) return false;
+    c.groupId = groupId || null;
+    Clients.save(clients);
+    return true;
+  },
+
+  // Toglie dal gruppo tutti gli elementi che referenziano uno degli id passati
+  ungroupBy(idSet) {
+    const clients = Clients.getAll();
+    let changed = false;
+    clients.forEach(c => { if (c.groupId && idSet.has(c.groupId)) { c.groupId = null; changed = true; } });
+    if (changed) Clients.save(clients);
+    return changed;
+  },
+
+  // Import in blocco da righe CSV già mappate ({ nome, link, gruppo, sottogruppo })
+  importRows(rows) {
+    const clients = Clients.getAll();
+    let added = 0, skipped = 0;
+    rows.forEach(r => {
+      const nome = (r.nome || '').trim();
+      const link = (r.link || '').trim();
+      if (!nome) { skipped++; return; }
+      let groupId = null;
+      const g = (r.gruppo || '').trim();
+      const sg = (r.sottogruppo || '').trim();
+      if (g && typeof Groups !== 'undefined') {
+        const top = Groups.ensure(g, null);
+        groupId = top.id;
+        if (sg) groupId = Groups.ensure(sg, top.id).id;
+      }
+      clients.unshift(Clients.normalize({ id: Utils.generateId(), nome, link, groupId, createdAt: new Date().toISOString() }));
+      added++;
+    });
+    Clients.save(clients);
+    return { added, skipped };
+  },
+
+  search(query, groupId = 'all') {
     const q = (query || '').toLowerCase();
-    return clients.filter(c =>
-      (c.nome || '').toLowerCase().includes(q) ||
-      (c.link || '').toLowerCase().includes(q)
-    );
+    return Clients.getAll().filter(c => {
+      const matchesText = !q ||
+        (c.nome || '').toLowerCase().includes(q) ||
+        (c.link || '').toLowerCase().includes(q);
+      const matchesGroup =
+        groupId === 'all' ? true :
+        groupId === 'none' ? !c.groupId :
+        (c.groupId === groupId ||
+         (typeof Groups !== 'undefined' && Groups.get(c.groupId) && Groups.get(c.groupId).parentId === groupId));
+      return matchesText && matchesGroup;
+    });
   },
 
   toCSV() {
     const clients = Clients.getAll();
-    const rows = clients.map(c => ({
-      Nome: c.nome,
-      Link: c.link,
-      'Data creazione': Utils.formatDate(c.createdAt)
-    }));
-    return Utils.arrayToCsv(rows, ['Nome', 'Link', 'Data creazione']);
+    const rows = clients.map(c => {
+      const g = (typeof Groups !== 'undefined') ? Groups.get(c.groupId) : null;
+      const top = g ? (g.parentId ? Groups.get(g.parentId) : g) : null;
+      const sub = g && g.parentId ? g : null;
+      return {
+        Nome: c.nome,
+        Link: c.link,
+        Gruppo: top ? top.name : '',
+        'Sotto-gruppo': sub ? sub.name : '',
+        'Data creazione': Utils.formatDate(c.createdAt)
+      };
+    });
+    return Utils.arrayToCsv(rows, ['Nome', 'Link', 'Gruppo', 'Sotto-gruppo', 'Data creazione']);
   }
 };
+
+// ============================================================================
+// GROUPS MODULE - Cartelle a 2 livelli per gli Elementi (gruppo → sotto-gruppo)
+// Ogni elemento sta in un gruppo o sotto-gruppo (o nessuno). Locale su
+// `panel_groups`; in cloud rispecchiato nella tabella `groups` (permesso della
+// sezione "clients") dal MAP di SupaSync.
+// ============================================================================
+const Groups = {
+  getAll() { return Storage.get(Storage.keys.groups, []).map(Groups.normalize); },
+  normalize(g = {}) {
+    return {
+      id: g.id || Utils.generateId(),
+      name: g.name || '',
+      parentId: g.parentId || null,
+      createdAt: g.createdAt || new Date().toISOString()
+    };
+  },
+  save(list) { return Storage.set(Storage.keys.groups, list.map(Groups.normalize)); },
+  get(id) { return id ? (Groups.getAll().find(g => g.id === id) || null) : null; },
+  topLevel() { return Groups.getAll().filter(g => !g.parentId); },
+  children(parentId) { return Groups.getAll().filter(g => g.parentId === parentId); },
+
+  add(name, parentId = null) {
+    name = (name || '').trim();
+    if (!name) return null;
+    // niente sotto-sotto-gruppi: se il "parent" è già annidato, aggancia al suo top
+    if (parentId) {
+      const p = Groups.get(parentId);
+      if (p && p.parentId) parentId = p.parentId;
+    }
+    const list = Groups.getAll();
+    const g = Groups.normalize({ id: Utils.generateId(), name, parentId: parentId || null });
+    list.push(g);
+    Groups.save(list);
+    return g;
+  },
+
+  // Trova (per nome, sotto lo stesso parent) o crea — usato dall'import CSV
+  ensure(name, parentId = null) {
+    name = (name || '').trim();
+    const found = Groups.getAll().find(g =>
+      (g.name || '').toLowerCase() === name.toLowerCase() && (g.parentId || null) === (parentId || null));
+    return found || Groups.add(name, parentId);
+  },
+
+  rename(id, name) {
+    name = (name || '').trim();
+    if (!name) return false;
+    const list = Groups.getAll();
+    const g = list.find(x => x.id === id);
+    if (!g) return false;
+    g.name = name;
+    Groups.save(list);
+    return true;
+  },
+
+  remove(id) {
+    const all = Groups.getAll();
+    const ids = new Set([id, ...all.filter(g => g.parentId === id).map(g => g.id)]); // gruppo + sotto-gruppi
+    Groups.save(all.filter(g => !ids.has(g.id)));
+    if (typeof Clients !== 'undefined') Clients.ungroupBy(ids); // elementi coinvolti → senza gruppo
+    return true;
+  },
+
+  // Etichetta completa "Gruppo / Sotto-gruppo"
+  labelFor(id) {
+    const g = Groups.get(id);
+    if (!g) return '';
+    if (g.parentId) { const p = Groups.get(g.parentId); return (p ? p.name + ' / ' : '') + g.name; }
+    return g.name;
+  }
+};
+window.Groups = Groups;
 
 // ============================================================================
 // ASSETS MODULE - Asset management (riutilizzabili per elementi)
@@ -1165,10 +1331,17 @@ const DOM = {
              title="Link non valido o non sicuro">
           ${Utils.escapeHtml(client.nome)}
         </span>`;
+    const groupLabel = (typeof Groups !== 'undefined' && client.groupId) ? Groups.labelFor(client.groupId) : '';
+    const groupBadgeHtml = groupLabel
+      ? `<span class="client-item__group"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${Utils.escapeHtml(groupLabel)}</span>`
+      : '';
     div.innerHTML = `
       <div class="client-item__info">
         ${nameCell}
-        <div class="client-item__date">${Utils.formatDate(client.createdAt)}</div>
+        <div class="client-item__meta">
+          <span class="client-item__date">${Utils.formatDate(client.createdAt)}</span>
+          ${groupBadgeHtml}
+        </div>
         ${assetBadgesHtml}
       </div>
       <div class="client-item__actions">
@@ -1443,7 +1616,52 @@ const UI = {
   // così add/edit/delete non azzerano la ricerca corrente.
   refreshClients() {
     const query = (DOM.clientSearch?.value || '').trim();
-    DOM.renderClients(query ? Clients.search(query) : null);
+    const groupSel = document.getElementById('clientGroupFilter');
+    const groupId = groupSel ? groupSel.value : 'all';
+    DOM.renderClients(Clients.search(query, groupId));
+  },
+
+  // Popola il <select> del filtro gruppo mantenendo la selezione valida
+  renderGroupFilter() {
+    const sel = document.getElementById('clientGroupFilter');
+    if (!sel) return;
+    const prev = sel.value || 'all';
+    let html = '<option value="all">Tutti i gruppi</option><option value="none">Senza gruppo</option>';
+    (typeof Groups !== 'undefined' ? Groups.topLevel() : []).forEach(g => {
+      html += `<option value="${g.id}">${Utils.escapeHtml(g.name)}</option>`;
+      Groups.children(g.id).forEach(sg => {
+        html += `<option value="${sg.id}">  — ${Utils.escapeHtml(sg.name)}</option>`;
+      });
+    });
+    sel.innerHTML = html;
+    sel.value = Array.from(sel.options).some(o => o.value === prev) ? prev : 'all';
+  },
+
+  // Opzioni <option> per assegnare un gruppo (form add/edit elemento)
+  _groupOptionsHtml(selectedId) {
+    const mark = (id) => (selectedId && id === selectedId) ? ' selected' : '';
+    let html = `<option value=""${selectedId ? '' : ' selected'}>— Nessun gruppo —</option>`;
+    (typeof Groups !== 'undefined' ? Groups.topLevel() : []).forEach(g => {
+      html += `<option value="${g.id}"${mark(g.id)}>${Utils.escapeHtml(g.name)}</option>`;
+      Groups.children(g.id).forEach(sg => {
+        html += `<option value="${sg.id}"${mark(sg.id)}>  — ${Utils.escapeHtml(sg.name)}</option>`;
+      });
+    });
+    return html;
+  },
+
+  // Applica e persiste la vista degli Elementi (comoda | compatta | affiancata)
+  applyClientsView(mode) {
+    const valid = ['comoda', 'compatta', 'affiancata'];
+    const m = valid.includes(mode) ? mode : 'comoda';
+    const section = document.getElementById('section-clients');
+    if (section) {
+      valid.forEach(v => section.classList.remove('clients-view--' + v));
+      section.classList.add('clients-view--' + m);
+    }
+    const sel = document.getElementById('clientsViewSelect');
+    if (sel && sel.value !== m) sel.value = m;
+    Storage.set(Storage.keys.clientsView, m);
   },
 
   setupClientHandlers() {
@@ -1451,11 +1669,12 @@ const UI = {
     const searchInput = DOM.clientSearch;
 
     addBtn?.addEventListener('click', () => UI.handleAddClient());
+    searchInput?.addEventListener('input', Utils.debounce(() => UI.refreshClients(), 300));
 
-    // Debounced search
-    searchInput?.addEventListener('input',
-      Utils.debounce(() => UI.refreshClients(), 300)
-    );
+    document.getElementById('clientGroupFilter')?.addEventListener('change', () => UI.refreshClients());
+    document.getElementById('manageGroupsBtn')?.addEventListener('click', () => UI.handleManageGroups());
+    document.getElementById('importClientsBtn')?.addEventListener('click', () => UI.handleImportCsv());
+    document.getElementById('clientsViewSelect')?.addEventListener('change', (e) => UI.applyClientsView(e.target.value));
 
     // Event delegation for client actions
     DOM.clientsList.addEventListener('click', (e) => {
@@ -1484,7 +1703,168 @@ const UI = {
       }
     });
 
+    // Stato iniziale: vista salvata + filtro gruppo popolato
+    UI.applyClientsView(Storage.get(Storage.keys.clientsView, 'comoda'));
+    UI.renderGroupFilter();
     DOM.renderClients();
+  },
+
+  // ---- Gestione gruppi (cartelle a 2 livelli) ----
+  handleManageGroups() {
+    Modal.open('Gestisci gruppi',
+      '<p class="modal-hint">Organizza gli elementi in gruppi e sotto-gruppi (come cartelle).</p>' +
+      '<div class="group-manager">' +
+        '<div class="group-manager__add">' +
+          '<input type="text" id="newGroupName" class="input" placeholder="Nuovo gruppo" maxlength="40" autocomplete="off">' +
+          '<button class="btn btn--primary btn--small" data-add-group>Aggiungi</button>' +
+        '</div>' +
+        '<div id="groupManagerTree" class="group-manager__tree"></div>' +
+      '</div>',
+      () => true, { confirmLabel: 'Chiudi' });
+    UI._renderGroupManager();
+  },
+
+  _renderGroupManager() {
+    const host = document.getElementById('groupManagerTree');
+    if (!host) return;
+    const esc = Utils.escapeHtml;
+    const tops = Groups.topLevel();
+    host.innerHTML = tops.length ? tops.map(g => {
+      const subs = Groups.children(g.id);
+      const subHtml = subs.map(sg => `
+        <li class="group-manager__row group-manager__row--sub">
+          <span class="group-manager__name">${esc(sg.name)}</span>
+          <span class="group-manager__tools">
+            <button class="kanban__coltool" data-rename-group="${sg.id}" title="Rinomina"><i class="fa-solid fa-pen"></i></button>
+            <button class="kanban__coltool kanban__coltool--danger" data-remove-group="${sg.id}" title="Elimina"><i class="fa-solid fa-xmark"></i></button>
+          </span>
+        </li>`).join('');
+      return `
+        <ul class="group-manager__list">
+          <li class="group-manager__row">
+            <span class="group-manager__name"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${esc(g.name)}</span>
+            <span class="group-manager__tools">
+              <button class="kanban__coltool" data-add-sub="${g.id}" title="Aggiungi sotto-gruppo"><i class="fa-solid fa-plus"></i></button>
+              <button class="kanban__coltool" data-rename-group="${g.id}" title="Rinomina"><i class="fa-solid fa-pen"></i></button>
+              <button class="kanban__coltool kanban__coltool--danger" data-remove-group="${g.id}" title="Elimina"><i class="fa-solid fa-xmark"></i></button>
+            </span>
+          </li>
+          ${subHtml}
+        </ul>`;
+    }).join('') : '<p class="group-manager__empty">Nessun gruppo. Creane uno qui sopra.</p>';
+
+    if (!host.dataset.bound) {
+      const container = host.closest('.group-manager');
+      container.addEventListener('click', (e) => {
+        const add = e.target.closest('[data-add-group]');
+        const addSub = e.target.closest('[data-add-sub]');
+        const ren = e.target.closest('[data-rename-group]');
+        const rem = e.target.closest('[data-remove-group]');
+        if (add) {
+          // aggiunta gruppo top: inline, il modale resta aperto
+          const input = document.getElementById('newGroupName');
+          const name = (input.value || '').trim();
+          if (!name) { Toast.error('Inserisci un nome'); return; }
+          Groups.add(name); input.value = '';
+          UI._afterGroupsChanged();
+        } else if (addSub) {
+          // operazioni che aprono un modale annidato → poi riapro il gestore
+          const pid = addSub.dataset.addSub;
+          UI._promptGroupName('Nuovo sotto-gruppo', '', (name) => { Groups.add(name, pid); UI._reopenGroupManager(); });
+        } else if (ren) {
+          const id = ren.dataset.renameGroup;
+          const g = Groups.get(id);
+          UI._promptGroupName('Rinomina gruppo', g ? g.name : '', (name) => { Groups.rename(id, name); UI._reopenGroupManager(); });
+        } else if (rem) {
+          const id = rem.dataset.removeGroup;
+          const g = Groups.get(id);
+          AlertDialog.confirmDelete({
+            title: 'Elimina gruppo',
+            message: `Eliminare "${g ? g.name : 'gruppo'}"? Gli elementi (e gli eventuali sotto-gruppi) resteranno senza gruppo.`,
+            onConfirm: () => { Groups.remove(id); UI._reopenGroupManager(); }
+          });
+        }
+      });
+      host.dataset.bound = '1';
+    }
+  },
+
+  // Re-render in-place del gestore (il modale è già aperto)
+  _afterGroupsChanged() {
+    UI._renderGroupManager();
+    UI.renderGroupFilter();
+    UI.refreshClients();
+  },
+
+  // Riapre il gestore gruppi dopo un modale annidato (prompt/conferma), che sul
+  // Modal condiviso avrebbe altrimenti sostituito il gestore.
+  _reopenGroupManager() {
+    UI.renderGroupFilter();
+    UI.refreshClients();
+    UI.handleManageGroups();
+  },
+
+  // Piccolo prompt testuale su Modal (non annidato: usa un secondo Modal.open)
+  _promptGroupName(title, value, onOk) {
+    Modal.open(title, UI._textField('Nome', value),
+      (body) => {
+        const v = body.querySelector('#modalTextInput').value.trim();
+        if (!v) { Toast.error('Inserisci un nome'); return false; }
+        onOk(v);
+        return true;
+      }, { confirmLabel: 'Salva' });
+  },
+
+  // ---- Import CSV ----
+  handleImportCsv() {
+    Modal.open('Importa CSV',
+      '<p class="modal-hint">Colonne riconosciute: <b>Nome</b>, <b>Link</b>, <b>Gruppo</b>, <b>Sotto-gruppo</b> (intestazioni flessibili, separatore , o ;). Gruppi e sotto-gruppi mancanti vengono creati.</p>' +
+      '<div class="form-group"><label class="label" for="csvFile">File .csv</label>' +
+        '<input type="file" id="csvFile" class="input" accept=".csv,text/csv"></div>' +
+      '<div class="form-group"><label class="label" for="csvText">…oppure incolla il CSV</label>' +
+        '<textarea id="csvText" class="input textarea" rows="6" placeholder="Nome,Link,Gruppo,Sotto-gruppo"></textarea></div>' +
+      '<p class="profile-msg" id="csvMsg" role="status"></p>',
+      (body) => {
+        const fileEl = body.querySelector('#csvFile');
+        const textEl = body.querySelector('#csvText');
+        const doImport = (text) => {
+          const res = UI._importCsvText(text);
+          if (res == null) { const m = body.querySelector('#csvMsg'); if (m) { m.textContent = 'CSV non valido o nessuna colonna "Nome" trovata.'; m.className = 'profile-msg is-err'; } return; }
+          Modal.close();
+          Toast.success(`Importati ${res.added} elementi` + (res.skipped ? ` (${res.skipped} saltati)` : ''));
+        };
+        if (fileEl && fileEl.files && fileEl.files[0]) {
+          const reader = new FileReader();
+          reader.onload = () => doImport(String(reader.result || ''));
+          reader.readAsText(fileEl.files[0]);
+          return false; // chiudo io dopo la lettura async
+        }
+        doImport(textEl ? textEl.value : '');
+        return false;
+      }, { confirmLabel: 'Importa' });
+  },
+
+  // Mappa intestazioni → {nome,link,gruppo,sottogruppo} e importa. Ritorna {added,skipped} o null.
+  _importCsvText(text) {
+    const rows = Utils.csvToArray(text);
+    if (!rows.length) return null;
+    const keyOf = (obj, re) => Object.keys(obj).find(k => re.test(k));
+    const sample = rows[0];
+    const kNome = keyOf(sample, /^(nome|name|attributo|titolo|elemento)$/i);
+    const kLink = keyOf(sample, /^(link|url|indirizzo|sito)$/i);
+    const kGrp = keyOf(sample, /^(gruppo|group|categoria|cartella)$/i);
+    const kSub = keyOf(sample, /(sotto|sub)/i);
+    if (!kNome) return null;
+    const mapped = rows.map(r => ({
+      nome: r[kNome] || '',
+      link: kLink ? (r[kLink] || '') : '',
+      gruppo: kGrp ? (r[kGrp] || '') : '',
+      sottogruppo: kSub ? (r[kSub] || '') : ''
+    }));
+    const res = Clients.importRows(mapped);
+    UI.renderGroupFilter();
+    UI.refreshClients();
+    return res;
   },
 
   setupAssetHandlers() {
@@ -1612,6 +1992,10 @@ const UI = {
           <div class="modal-static-field modal-static-field--link">${Utils.escapeHtml(link)}</div>
         </div>
         <div class="form-group">
+          <label class="label" for="clientGroupSelect">Gruppo</label>
+          <select id="clientGroupSelect" class="input">${UI._groupOptionsHtml(null)}</select>
+        </div>
+        <div class="form-group">
           <h4 class="h3" style="margin-top: 0;">Asset disponibili</h4>
           <div id="clientAssetsSelection"></div>
         </div>
@@ -1621,12 +2005,13 @@ const UI = {
     Modal.open('Aggiungi Elemento', content, (body) => {
       const selectedAssets = Array.from(body.querySelectorAll('.asset-selection-checkbox:checked'))
         .map(cb => cb.value);
+      const groupId = body.querySelector('#clientGroupSelect')?.value || null;
 
-      Clients.add(nome, link, selectedAssets);
+      Clients.add(nome, link, selectedAssets, groupId);
       nameInput.value = '';
       linkInput.value = '';
       UI.refreshClients();
-      Toast.success('Elemento aggiunto con asset associati');
+      Toast.success('Elemento aggiunto');
       return true;
     });
 
@@ -1647,6 +2032,10 @@ const UI = {
         <input type="url" id="editClientLink" class="input" value="${Utils.escapeHtml(client.link)}">
       </div>
       <div class="form-group">
+        <label class="label" for="editClientGroup">Gruppo</label>
+        <select id="editClientGroup" class="input">${UI._groupOptionsHtml(client.groupId || null)}</select>
+      </div>
+      <div class="form-group">
         <label class="label">Asset associati:</label>
         <div id="editClientAssetsSelection"></div>
       </div>
@@ -1657,6 +2046,7 @@ const UI = {
       const link = body.querySelector('#editClientLink').value.trim();
       const selectedAssets = Array.from(body.querySelectorAll('.asset-selection-checkbox:checked'))
         .map(cb => cb.value);
+      const groupId = body.querySelector('#editClientGroup')?.value || null;
 
       const validation = Validators.validateClient(nome, link);
       if (!validation.valid) {
@@ -1664,7 +2054,7 @@ const UI = {
         return false;
       }
 
-      Clients.update(clientId, nome, link, selectedAssets);
+      Clients.update(clientId, nome, link, selectedAssets, groupId);
       UI.refreshClients();
       Toast.success('Elemento aggiornato');
       return true;

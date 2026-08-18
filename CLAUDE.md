@@ -64,7 +64,8 @@ e inizializzato su `DOMContentLoaded`. Convenzione: ogni modulo è un `const Nom
 | `Storage` | Wrapper `localStorage` con try/catch e `JSON.parse/stringify`. Le chiavi sono in `Storage.keys`. |
 | `Validators` | Validazione pura form (nome/link/note/task), ritorna `{ valid, error? }`. |
 | `Utils` | Helper: `escapeHtml`, `generateId`, `debounce`, formattazione date, CSV, download blob. |
-| `Clients` | CRUD "Elementi & Link". Chiave storage `panel_clients`. |
+| `Clients` | CRUD "Elementi & Link". Chiave storage `panel_clients`. Ogni elemento può avere un `groupId` (gruppo/sotto-gruppo) e importarsi da CSV. |
+| `Groups` | Cartelle a 2 livelli (gruppo → sotto-gruppo) per gli Elementi. Locale su `panel_groups`; in cloud tabella `groups` (permesso sezione `clients`). |
 | `Assets` | CRUD asset riutilizzabili, associabili agli elementi tramite array di id. |
 | `Notes` | CRUD note. |
 | `Tasks` | CRUD attività. Ogni task referenzia una bacheca (`boardId`) e una colonna (`status` = id colonna). |
@@ -95,7 +96,12 @@ Chiavi in `Storage.keys` più alcune ausiliarie. Ogni record ha `id` (stringa da
 
 ```jsonc
 // panel_clients  → array
-{ "id": "...", "nome": "...", "link": "...", "assets": ["assetId", ...], "createdAt": "ISO" }
+// `groupId` = id di un gruppo o sotto-gruppo in panel_groups (o null).
+{ "id": "...", "nome": "...", "link": "...", "assets": ["assetId", ...], "groupId": "<groupId>|null", "createdAt": "ISO" }
+
+// panel_groups   → array (cartelle a 2 livelli per gli Elementi)
+// `parentId` = id del gruppo padre (null = gruppo di primo livello).
+{ "id": "...", "name": "...", "parentId": "<groupId>|null", "createdAt": "ISO" }
 
 // panel_assets   → array
 { "id": "...", "name": "...", "description": "...", "createdAt": "ISO" }
@@ -119,6 +125,8 @@ Chiave ausiliaria: `panel_current_board` (id della bacheca attiva).
 
 Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
 `panel_dark_mode`, `panel_layout_expanded`, `panlink_sidebar_collapsed`.
+
+Vista Elementi: `panel_clients_view` = `"comoda"` | `"compatta"` | `"affiancata"`.
 
 > `Clients.normalize()` rende retro-compatibili i record vecchi (`name` → `nome`,
 > default per `assets`/`createdAt`). Applicare lo stesso pattern quando si estende

@@ -136,7 +136,7 @@
       if (window.Profile) Profile.unmount();
       // pulizia cache bacheche (evita che un altro account sullo stesso browser
       // erediti le bacheche del precedente)
-      if (window.Storage) { Storage.remove(Storage.keys.boards); Storage.remove(Storage.keys.currentBoard); }
+      if (window.Storage) { Storage.remove(Storage.keys.boards); Storage.remove(Storage.keys.currentBoard); Storage.remove(Storage.keys.groups); }
       unmountLogout();
       showGate(true);
     }
