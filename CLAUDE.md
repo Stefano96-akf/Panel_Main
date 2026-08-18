@@ -67,7 +67,8 @@ e inizializzato su `DOMContentLoaded`. Convenzione: ogni modulo è un `const Nom
 | `Clients` | CRUD "Elementi & Link". Chiave storage `panel_clients`. |
 | `Assets` | CRUD asset riutilizzabili, associabili agli elementi tramite array di id. |
 | `Notes` | CRUD note. |
-| `Tasks` | CRUD attività. |
+| `Tasks` | CRUD attività. Ogni task referenzia una bacheca (`boardId`) e una colonna (`status` = id colonna). |
+| `Boards` | Bacheche Kanban multiple (max 3) con colonne dinamiche `[{id,label}]`. Locale su `panel_boards`; in cloud è online-first (tabella `boards` + `board_members`, accesso ristretto per-bacheca) con cache localStorage. |
 | `Appointments` | CRUD appuntamenti (tipo `remote`/`onsite`), ordinati per data. |
 | `Toast` | Notifiche temporanee (success/error/warning/info). |
 | `Modal` | Modale unico riutilizzabile con focus trap, ESC, restore focus. |
@@ -103,11 +104,18 @@ Chiavi in `Storage.keys` più alcune ausiliarie. Ogni record ha `id` (stringa da
 { "id": "...", "text": "...", "createdAt": "ISO" }
 
 // panel_tasks    → array
-{ "id": "...", "text": "...", "completed": false, "status": "todo|doing|done", "createdAt": "ISO" }
+// `status` = id della colonna nella bacheca `boardId`; `completed` è un flag
+// indipendente usato dalla lista "Attività".
+{ "id": "...", "boardId": "...", "text": "...", "status": "<colId>", "completed": false, "createdAt": "ISO" }
+
+// panel_boards   → array (bacheche Kanban, max 3)
+{ "id": "...", "name": "...", "cols": [{ "id": "todo", "label": "Da fare" }, ...], "createdAt": "ISO" }
 
 // panel_appointments → array
 { "id": "...", "date": "YYYY-MM-DD", "description": "...", "type": "remote|onsite", "completed": false, "createdAt": "ISO" }
 ```
+
+Chiave ausiliaria: `panel_current_board` (id della bacheca attiva).
 
 Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
 `panel_dark_mode`, `panel_layout_expanded`, `panlink_sidebar_collapsed`.

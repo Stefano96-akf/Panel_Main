@@ -23,6 +23,8 @@ const Storage = {
     tasks: 'panel_tasks',
     appointments: 'panel_appointments',
     assets: 'panel_assets',
+    boards: 'panel_boards',
+    currentBoard: 'panel_current_board',
     darkMode: 'panel_dark_mode',
     layoutExpanded: 'panel_layout_expanded',
     sidebarCollapsed: 'panlink_sidebar_collapsed',
@@ -486,21 +488,17 @@ const Notes = {
 // TASKS MODULE - Task management
 // ============================================================================
 const Tasks = {
-  // Colonne della bacheca Kanban, in ordine
-  statuses: ['todo', 'doing', 'done'],
-
-  // Normalizza un task garantendo `status` e mantenendo `completed` sincronizzato
-  // per retro-compatibilita con i record salvati prima della bacheca.
+  // Normalizza un task: garantisce id, `boardId`, colonna (`status` = id colonna)
+  // e mantiene `completed` come flag indipendente (usato dalla lista Attività).
   normalize(task = {}) {
-    const status = Tasks.statuses.includes(task.status)
-      ? task.status
-      : (task.completed ? 'done' : 'todo');
+    const status = task.status || 'todo';
     return {
       ...task,
       id: task.id || Utils.generateId(),
+      boardId: task.boardId || null,
       text: task.text || '',
       status,
-      completed: status === 'done',
+      completed: task.completed != null ? !!task.completed : (status === 'done'),
       createdAt: task.createdAt || new Date().toISOString()
     };
   },
@@ -513,12 +511,18 @@ const Tasks = {
     return Storage.set(Storage.keys.tasks, tasksList.map(Tasks.normalize));
   },
 
-  add(text, status = 'todo') {
+  // Task di una singola bacheca
+  getByBoard(boardId) {
+    return Tasks.getAll().filter(t => t.boardId === boardId);
+  },
+
+  add(text, boardId, colId) {
     const tasks = Tasks.getAll();
     const newTask = Tasks.normalize({
       id: Utils.generateId(),
+      boardId: boardId || null,
       text,
-      status,
+      status: colId || 'todo',
       createdAt: new Date().toISOString()
     });
     tasks.unshift(newTask);
@@ -529,59 +533,309 @@ const Tasks = {
   toggle(id) {
     const tasks = Tasks.getAll();
     const task = tasks.find(t => t.id === id);
-    if (task) {
-      task.status = task.status === 'done' ? 'todo' : 'done';
-      task.completed = task.status === 'done';
-      Tasks.save(tasks);
-    }
+    if (task) { task.completed = !task.completed; Tasks.save(tasks); }
     return true;
   },
 
-  // Sposta un task in una colonna della bacheca
-  setStatus(id, status) {
-    if (!Tasks.statuses.includes(status)) return false;
+  // Sposta un task in una colonna (per id) della sua bacheca
+  setColumn(id, colId) {
     const tasks = Tasks.getAll();
     const task = tasks.find(t => t.id === id);
-    if (!task) return false;
-    if (task.status === status) return false;
-    task.status = status;
-    task.completed = status === 'done';
+    if (!task || task.status === colId) return false;
+    task.status = colId;
+    task.completed = colId === 'done';
     Tasks.save(tasks);
     return true;
   },
 
-  // Sposta un task alla colonna adiacente (dir = -1 sinistra, +1 destra)
+  // Sposta un task alla colonna adiacente nella sua bacheca (dir -1 / +1)
   moveByOffset(id, dir) {
-    const tasks = Tasks.getAll();
-    const task = tasks.find(t => t.id === id);
+    const task = Tasks.getAll().find(t => t.id === id);
     if (!task) return false;
-    const current = Tasks.statuses.indexOf(task.status);
+    const board = (typeof Boards !== 'undefined') ? Boards.get(task.boardId) : null;
+    if (!board) return false;
+    const ids = board.cols.map(c => c.id);
+    let current = ids.indexOf(task.status);
+    if (current < 0) current = 0;
     const next = current + dir;
-    if (next < 0 || next >= Tasks.statuses.length) return false;
-    return Tasks.setStatus(id, Tasks.statuses[next]);
+    if (next < 0 || next >= ids.length) return false;
+    return Tasks.setColumn(id, ids[next]);
   },
 
-  getByStatus(status) {
-    return Tasks.getAll().filter(t => t.status === status);
+  // Riassegna i task di una colonna (es. colonna eliminata) a un'altra colonna
+  reassignColumn(boardId, fromColId, toColId) {
+    const tasks = Tasks.getAll();
+    let changed = false;
+    tasks.forEach(t => {
+      if (t.boardId === boardId && t.status === fromColId) {
+        t.status = toColId; t.completed = toColId === 'done'; changed = true;
+      }
+    });
+    if (changed) Tasks.save(tasks);
+    return changed;
+  },
+
+  // Adotta i task senza bacheca (retro-compat) nella bacheca indicata
+  adoptOrphans(boardId) {
+    if (!boardId) return false;
+    const tasks = Tasks.getAll();
+    let changed = false;
+    tasks.forEach(t => { if (!t.boardId) { t.boardId = boardId; changed = true; } });
+    if (changed) Tasks.save(tasks);
+    return changed;
+  },
+
+  // Elimina tutti i task di una bacheca (usato all'eliminazione della bacheca)
+  deleteByBoard(boardId) {
+    Tasks.save(Tasks.getAll().filter(t => t.boardId !== boardId));
   },
 
   delete(id) {
-    const tasks = Tasks.getAll();
-    const filtered = tasks.filter(t => t.id !== id);
-    Tasks.save(filtered);
+    Tasks.save(Tasks.getAll().filter(t => t.id !== id));
     return true;
   },
 
   update(id, text) {
     const tasks = Tasks.getAll();
     const task = tasks.find(t => t.id === id);
-    if (task) {
-      task.text = text;
-      Tasks.save(tasks);
-    }
+    if (task) { task.text = text; Tasks.save(tasks); }
     return true;
   }
 };
+
+// ============================================================================
+// BOARDS MODULE - Bacheche Kanban multiple con colonne dinamiche
+//
+// Ogni bacheca ha un nome e un elenco ORDINATO di colonne [{id,label}].
+// I task referenziano la bacheca (boardId) e la colonna (status = id colonna).
+//
+// Modello dati:
+//   - Locale (solo localStorage): le bacheche vivono in `panel_boards`, la
+//     bacheca attiva in `panel_current_board`. Tutto sincrono.
+//   - Cloud (Supabase): le bacheche sono ONLINE-FIRST (tabella `boards` con RLS
+//     per-bacheca) con cache in localStorage per il render sincrono. Le
+//     scritture (create/rinomina/colonne/elimina/accesso) chiamano `window.sb`
+//     e poi aggiornano la cache. `panel_boards` NON è nel MAP di SupaSync,
+//     quindi scriverlo non innesca il push snapshot (niente clobbering).
+// ============================================================================
+const Boards = {
+  MAX: 3,
+  DEFAULT_COLS: [
+    { id: 'todo',  label: 'Da fare' },
+    { id: 'doing', label: 'In corso' },
+    { id: 'done',  label: 'Completato' }
+  ],
+
+  normalize(b = {}) {
+    let cols = Array.isArray(b.cols) ? b.cols : null;
+    // retro-compat: colonne salvate come mappa {id: label}
+    if (!cols && b.cols && typeof b.cols === 'object') {
+      cols = Object.keys(b.cols).map(k => ({ id: k, label: String(b.cols[k]) }));
+    }
+    if (!cols || !cols.length) cols = Boards.DEFAULT_COLS.map(c => ({ ...c }));
+    return {
+      id: b.id || Utils.generateId(),
+      name: b.name || 'Bacheca',
+      cols: cols.map(c => ({ id: c.id || Utils.generateId(), label: c.label || 'Colonna' })),
+      createdBy: b.createdBy || null,
+      createdAt: b.createdAt || new Date().toISOString()
+    };
+  },
+
+  // ---- stato cloud/permessi ----
+  _online() { return !!window.sb && !!(window.Workspace && Workspace.state && Workspace.state.currentId); },
+  _ws() { return (window.Workspace && Workspace.state && Workspace.state.currentId) || null; },
+  _uid() { return (window.SupaSync && SupaSync.userId) || null; },
+  isCloud() { return Boards._online(); },
+  isAdmin() {
+    const w = window.Workspace && Workspace.current && Workspace.current();
+    return !!w && (w.role === 'owner' || w.role === 'admin');
+  },
+  canCreate() { return !Boards._online() || (window.Workspace && Workspace.canEdit('tasks')); },
+  canEditTasks() { return !Boards._online() || (window.Workspace && Workspace.canEdit('tasks')); },
+  canManageBoard(board) {
+    if (!Boards._online()) return true;
+    if (Boards.isAdmin()) return true;
+    return !!board && !!board.createdBy && board.createdBy === Boards._uid();
+  },
+  canManageAccess(board) {
+    if (!Boards._online()) return false; // l'accesso per-bacheca ha senso solo in cloud
+    return Boards.canManageBoard(board);
+  },
+
+  _msg(e) {
+    const m = (e && e.message) || '';
+    if (/Limite di 3|too many|limit/i.test(m)) return 'Massimo ' + Boards.MAX + ' bacheche per spazio.';
+    if (/row-level security|violates row-level|permission/i.test(m)) return 'Non hai i permessi per questa operazione.';
+    return m || 'Operazione non riuscita.';
+  },
+
+  // ---- lettura sincrona (cache) ----
+  all() {
+    const list = Storage.get(Storage.keys.boards, []);
+    if (Array.isArray(list) && list.length) return list.map(Boards.normalize);
+    if (Boards._online()) return []; // in cloud il seed lo fa ensureDefaultAndAdopt()
+    const def = Boards.normalize({ name: 'Bacheca' });
+    Storage.set(Storage.keys.boards, [def]);
+    return [def];
+  },
+  get(id) { return Boards.all().find(b => b.id === id) || null; },
+  currentId() {
+    const list = Boards.all();
+    const saved = Storage.get(Storage.keys.currentBoard, null);
+    if (saved && list.some(b => b.id === saved)) return saved;
+    const first = list[0] ? list[0].id : null;
+    if (first) Storage.set(Storage.keys.currentBoard, first);
+    return first;
+  },
+  current() { const id = Boards.currentId(); return id ? Boards.get(id) : null; },
+  setCurrent(id) { Storage.set(Storage.keys.currentBoard, id); },
+
+  // ---- cache helpers ----
+  _cacheUpsert(b) {
+    const norm = Boards.normalize(b);
+    const list = (Storage.get(Storage.keys.boards, []) || []).map(Boards.normalize).filter(x => x.id !== norm.id);
+    list.push(norm);
+    Storage.set(Storage.keys.boards, list);
+  },
+  _cacheRemove(id) {
+    Storage.set(Storage.keys.boards, (Storage.get(Storage.keys.boards, []) || []).filter(x => x.id !== id));
+  },
+
+  // ---- sincronizzazione cloud ----
+  async pull() {
+    if (!Boards._online()) return;
+    const { data, error } = await window.sb.from('boards')
+      .select('id,name,cols,created_by,created_at')
+      .order('created_at', { ascending: true });
+    if (error) { console.error('[Boards] pull', error.message); return; }
+    const list = (data || []).map(r => Boards.normalize({
+      id: r.id, name: r.name, cols: r.cols, createdBy: r.created_by, createdAt: r.created_at
+    }));
+    Storage.set(Storage.keys.boards, list); // panel_boards non è nel MAP → nessun push
+  },
+
+  async ensureDefaultAndAdopt() {
+    let list = Boards.all();
+    if (!list.length && Boards.canCreate()) {
+      await Boards.create('Bacheca');
+      list = Boards.all();
+    }
+    const cur = Boards.current();
+    if (cur) Tasks.adoptOrphans(cur.id);
+  },
+
+  // ---- mutazioni ----
+  async create(name) {
+    if (Boards.all().length >= Boards.MAX) {
+      if (typeof Toast !== 'undefined') Toast.warning('Massimo ' + Boards.MAX + ' bacheche per spazio.');
+      return null;
+    }
+    const cols = Boards.DEFAULT_COLS.map(c => ({ ...c }));
+    name = (name || 'Bacheca').trim() || 'Bacheca';
+    if (Boards._online()) {
+      const { data, error } = await window.sb.from('boards')
+        .insert({ workspace_id: Boards._ws(), name, cols })
+        .select('id,name,cols,created_by,created_at').single();
+      if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return null; }
+      Boards._cacheUpsert({ id: data.id, name: data.name, cols: data.cols, createdBy: data.created_by, createdAt: data.created_at });
+      Boards.setCurrent(data.id);
+      return Boards.get(data.id);
+    }
+    const b = Boards.normalize({ name, cols });
+    Boards._cacheUpsert(b);
+    Boards.setCurrent(b.id);
+    return b;
+  },
+
+  async rename(id, name) {
+    name = (name || '').trim();
+    if (!name) return false;
+    if (Boards._online()) {
+      const { error } = await window.sb.from('boards').update({ name }).eq('id', id);
+      if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return false; }
+    }
+    const b = Boards.get(id);
+    if (b) { b.name = name; Boards._cacheUpsert(b); }
+    return true;
+  },
+
+  async setColumns(id, cols) {
+    cols = (cols || []).map(c => ({ id: c.id || Utils.generateId(), label: (c.label || 'Colonna').trim() || 'Colonna' }));
+    if (!cols.length) return false;
+    if (Boards._online()) {
+      const { error } = await window.sb.from('boards').update({ cols }).eq('id', id);
+      if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return false; }
+    }
+    const b = Boards.get(id);
+    if (b) { b.cols = cols; Boards._cacheUpsert(b); }
+    return true;
+  },
+
+  addColumn(id, label) {
+    const b = Boards.get(id);
+    if (!b) return Promise.resolve(false);
+    const cols = b.cols.concat([{ id: Utils.generateId(), label: (label || 'Nuova colonna').trim() || 'Nuova colonna' }]);
+    return Boards.setColumns(id, cols);
+  },
+  renameColumn(id, colId, label) {
+    const b = Boards.get(id);
+    if (!b) return Promise.resolve(false);
+    const cols = b.cols.map(c => c.id === colId ? { id: c.id, label } : c);
+    return Boards.setColumns(id, cols);
+  },
+  async removeColumn(id, colId) {
+    const b = Boards.get(id);
+    if (!b) return false;
+    if (b.cols.length <= 1) { if (typeof Toast !== 'undefined') Toast.warning('Deve restare almeno una colonna.'); return false; }
+    const remaining = b.cols.filter(c => c.id !== colId);
+    Tasks.reassignColumn(id, colId, remaining[0].id);
+    return Boards.setColumns(id, remaining);
+  },
+
+  async remove(id) {
+    if (Boards.all().length <= 1) { if (typeof Toast !== 'undefined') Toast.warning('Deve restare almeno una bacheca.'); return false; }
+    if (Boards._online()) {
+      const { error } = await window.sb.from('boards').delete().eq('id', id);
+      if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return false; }
+    }
+    Tasks.deleteByBoard(id); // in cloud i task vanno in cascade; qui puliamo la cache locale
+    Boards._cacheRemove(id);
+    if (Boards.currentId() === id) {
+      const next = Boards.all()[0];
+      Boards.setCurrent(next ? next.id : null);
+    }
+    return true;
+  },
+
+  // ---- gestione accesso (collaboratori per-bacheca, solo cloud) ----
+  async members(id) {
+    if (!Boards._online()) return [];
+    const { data, error } = await window.sb.rpc('board_members_emails', { b: id });
+    if (error) { console.error('[Boards] members', error.message); return []; }
+    return (data || []).map(r => ({ userId: r.user_id, email: r.email }));
+  },
+  async candidates(id) {
+    if (!Boards._online()) return [];
+    const { data, error } = await window.sb.rpc('workspace_members_emails', { ws: Boards._ws() });
+    if (error) { console.error('[Boards] candidates', error.message); return []; }
+    const memberIds = new Set((await Boards.members(id)).map(m => m.userId));
+    return (data || []).filter(r => !memberIds.has(r.user_id)).map(r => ({ userId: r.user_id, email: r.email }));
+  },
+  async attach(id, userId) {
+    if (!Boards._online()) return false;
+    const { error } = await window.sb.from('board_members').insert({ board_id: id, user_id: userId });
+    if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return false; }
+    return true;
+  },
+  async detach(id, userId) {
+    if (!Boards._online()) return false;
+    const { error } = await window.sb.from('board_members').delete().eq('board_id', id).eq('user_id', userId);
+    if (error) { if (typeof Toast !== 'undefined') Toast.error(Boards._msg(error)); return false; }
+    return true;
+  }
+};
+window.Boards = Boards;
 
 // ============================================================================
 // APPOINTMENTS MODULE - Appointments management
@@ -1003,66 +1257,130 @@ const DOM = {
     DOM.renderBoard();
   },
 
-  // Etichette e stile per colonna della bacheca
-  boardMeta: {
-    todo:  { label: 'Da fare',    icon: 'fa-list-ul' },
-    doing: { label: 'In corso',   icon: 'fa-spinner' },
-    done:  { label: 'Completato', icon: 'fa-circle-check' }
-  },
+  // Palette dei "pallini" colonna (per indice), in armonia col design system
+  COL_DOTS: ['#b9ff66', '#8ed0ff', '#ffd166', '#c9a7ff', '#ff9db1', '#7ee0c0'],
 
-  // Kanban board rendering — ripopola solo le liste interne (le dropzone e i
-  // relativi handler delegati restano vivi tra un render e l'altro).
+  // Rendering completo della bacheca: barra bacheche (tab) + intestazione con
+  // azioni + colonne dinamiche. Le dropzone e gli handler delegati (drag&drop,
+  // click) vivono su #kanbanBoard e restano validi tra un render e l'altro.
   renderBoard() {
+    const controls = document.getElementById('boardControls');
     const board = document.getElementById('kanbanBoard');
     if (!board) return;
 
-    const statusIndex = { todo: 0, doing: 1, done: 2 };
+    const boards = Boards.all();
+    const current = Boards.current();
+    const canEditTasks = Boards.canEditTasks();
+    const addWrap = document.getElementById('boardAddWrap');
 
-    Tasks.statuses.forEach(status => {
-      const zone = board.querySelector(`[data-dropzone="${status}"]`);
-      const countEl = board.querySelector(`[data-count="${status}"]`);
-      if (!zone) return;
+    // Nessuna bacheca visibile (es. visualizzatore senza accessi)
+    if (!current) {
+      if (controls) controls.innerHTML =
+        '<div class="board-empty"><i class="fa-solid fa-inbox" aria-hidden="true"></i>' +
+        '<p>Nessuna bacheca disponibile.</p></div>';
+      board.innerHTML = '';
+      if (addWrap) addWrap.hidden = true;
+      return;
+    }
+    if (addWrap) addWrap.hidden = !canEditTasks;
 
-      const items = Tasks.getByStatus(status);
-      if (countEl) countEl.textContent = items.length;
+    const canManage = Boards.canManageBoard(current);
+    const canAccess = Boards.canManageAccess(current);
+    const esc = Utils.escapeHtml;
 
-      if (items.length === 0) {
-        zone.innerHTML = `<div class="kanban__empty">Trascina qui una card</div>`;
-        return;
-      }
+    // ---- Barra bacheche + intestazione (in #boardControls) ----
+    if (controls) {
+      const tabs = boards.map(b =>
+        `<button class="board-tab ${b.id === current.id ? 'is-active' : ''}" role="tab"
+                 aria-selected="${b.id === current.id}" data-board-switch="${b.id}">${esc(b.name)}</button>`
+      ).join('');
+      const addTab = (Boards.canCreate() && boards.length < Boards.MAX)
+        ? `<button class="board-tab board-tab--add" data-board-new title="Nuova bacheca">
+             <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuova</button>`
+        : '';
 
-      const idx = statusIndex[status];
-      zone.innerHTML = items.map(task => {
-        const canPrev = idx > 0;
-        const canNext = idx < Tasks.statuses.length - 1;
-        return `
-          <article class="kanban-card kanban-card--${status}" draggable="true"
-                   data-task-id="${task.id}" tabindex="0"
-                   aria-label="${Utils.escapeHtml(task.text)}">
-            <div class="kanban-card__text">${Utils.escapeHtml(task.text)}</div>
-            <div class="kanban-card__footer">
-              <span class="kanban-card__date">${Utils.formatDateShort(task.createdAt)}</span>
+      const actions =
+        (canAccess ? `<button class="btn btn--secondary btn--small" data-board-access="${current.id}">
+             <i class="fa-solid fa-user-group" aria-hidden="true"></i> Accesso</button>` : '') +
+        (canManage ? `<button class="btn btn--secondary btn--small" data-board-rename="${current.id}">
+             <i class="fa-solid fa-pen" aria-hidden="true"></i> Rinomina</button>` : '') +
+        (canManage ? `<button class="btn btn--secondary btn--small" data-board-addcol="${current.id}">
+             <i class="fa-solid fa-plus" aria-hidden="true"></i> Colonna</button>` : '') +
+        (canManage && boards.length > 1 ? `<button class="btn btn--secondary btn--small btn--danger" data-board-delete="${current.id}" title="Elimina bacheca">
+             <i class="fa-solid fa-trash" aria-hidden="true"></i></button>` : '');
+
+      controls.innerHTML =
+        `<div class="board-tabs" role="tablist">${tabs}${addTab}</div>` +
+        `<div class="board-head">
+           <h3 class="board-head__title">${esc(current.name)}</h3>
+           <div class="board-head__actions">${actions}</div>
+         </div>`;
+    }
+
+    // ---- Colonne (in #kanbanBoard) ----
+    const tasks = Tasks.getByBoard(current.id);
+    const colIds = current.cols.map(c => c.id);
+    const byCol = {};
+    current.cols.forEach(c => { byCol[c.id] = []; });
+    tasks.forEach(t => {
+      const key = colIds.includes(t.status) ? t.status : colIds[0]; // fallback: prima colonna
+      byCol[key].push(t);
+    });
+
+    board.innerHTML = current.cols.map((col, ci) => {
+      const dot = DOM.COL_DOTS[ci % DOM.COL_DOTS.length];
+      const items = byCol[col.id] || [];
+      const cards = items.length === 0
+        ? `<div class="kanban__empty">${canEditTasks ? 'Trascina qui una card' : 'Nessuna attività'}</div>`
+        : items.map(task => {
+            const canPrev = ci > 0;
+            const canNext = ci < current.cols.length - 1;
+            const tools = canEditTasks ? `
               <div class="kanban-card__actions">
                 <button class="kanban-card__btn" title="Sposta a sinistra"
                         data-board-move="-1" data-task-id="${task.id}" ${canPrev ? '' : 'disabled'}>
-                  <i class="fa-solid fa-arrow-left"></i>
-                </button>
+                  <i class="fa-solid fa-arrow-left"></i></button>
                 <button class="kanban-card__btn" title="Sposta a destra"
                         data-board-move="1" data-task-id="${task.id}" ${canNext ? '' : 'disabled'}>
-                  <i class="fa-solid fa-arrow-right"></i>
-                </button>
+                  <i class="fa-solid fa-arrow-right"></i></button>
                 <button class="kanban-card__btn" title="Modifica" data-edit-task="${task.id}">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
+                  <i class="fa-solid fa-pen"></i></button>
                 <button class="kanban-card__btn kanban-card__btn--delete" title="Elimina" data-delete-task="${task.id}">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
+                  <i class="fa-solid fa-trash"></i></button>
+              </div>` : '';
+            return `
+              <article class="kanban-card" ${canEditTasks ? 'draggable="true"' : ''}
+                       data-task-id="${task.id}" tabindex="0" aria-label="${esc(task.text)}"
+                       style="border-left-color:${dot}">
+                <div class="kanban-card__text">${esc(task.text)}</div>
+                <div class="kanban-card__footer">
+                  <span class="kanban-card__date">${Utils.formatDateShort(task.createdAt)}</span>
+                  ${tools}
+                </div>
+              </article>`;
+          }).join('');
+
+      const colTools = Boards.canManageBoard(current) ? `
+        <button class="kanban__coltool" data-col-rename="${col.id}" title="Rinomina colonna">
+          <i class="fa-solid fa-pen"></i></button>
+        ${current.cols.length > 1 ? `<button class="kanban__coltool kanban__coltool--danger" data-col-remove="${col.id}" title="Elimina colonna">
+          <i class="fa-solid fa-xmark"></i></button>` : ''}` : '';
+
+      return `
+        <section class="kanban__column" data-status="${col.id}">
+          <header class="kanban__column-header">
+            <h3 class="kanban__column-title">
+              <span class="kanban__dot" style="background:${dot}" aria-hidden="true"></span>
+              <span class="kanban__column-label">${esc(col.label)}</span>
+            </h3>
+            <div class="kanban__column-tools">
+              <span class="kanban__count" data-count="${col.id}">${items.length}</span>
+              ${colTools}
             </div>
-          </article>
-        `;
-      }).join('');
-    });
+          </header>
+          <div class="kanban__list" data-dropzone="${col.id}" aria-label="Colonna ${esc(col.label)}">${cards}</div>
+        </section>`;
+    }).join('');
   },
 
   // Appointments rendering
@@ -1519,12 +1837,14 @@ const UI = {
 
     const addFromInput = () => {
       if (!input) return;
+      const cur = Boards.current();
+      if (!cur) { Toast.error('Nessuna bacheca disponibile'); return; }
       const validation = Validators.validateTask(input.value);
       if (!validation.valid) {
         Toast.error(validation.error);
         return;
       }
-      Tasks.add(input.value.trim(), 'todo');
+      Tasks.add(input.value.trim(), cur.id, cur.cols[0].id);
       input.value = '';
       DOM.renderTasks();
       Toast.success('Attività aggiunta');
@@ -1535,12 +1855,35 @@ const UI = {
       if (e.key === 'Enter') addFromInput();
     });
 
-    // Click delegato: sposta / modifica / elimina (edit e delete riusano gli handler task)
+    // ---- Barra bacheche + intestazione (#boardControls): switch / nuova /
+    //      rinomina / colonna / accesso / elimina bacheca ----
+    const controls = document.getElementById('boardControls');
+    controls?.addEventListener('click', (e) => {
+      const sw = e.target.closest('[data-board-switch]');
+      const nw = e.target.closest('[data-board-new]');
+      const rn = e.target.closest('[data-board-rename]');
+      const ac = e.target.closest('[data-board-addcol]');
+      const acc = e.target.closest('[data-board-access]');
+      const del = e.target.closest('[data-board-delete]');
+      if (sw) { Boards.setCurrent(sw.dataset.boardSwitch); DOM.renderTasks(); return; }
+      if (nw) { UI.handleNewBoard(); return; }
+      if (rn) { UI.handleRenameBoard(rn.dataset.boardRename); return; }
+      if (ac) { UI.handleAddColumn(ac.dataset.boardAddcol); return; }
+      if (acc) { UI.handleBoardAccess(acc.dataset.boardAccess); return; }
+      if (del) { UI.handleDeleteBoard(del.dataset.boardDelete); return; }
+    });
+
+    // Click delegato su #kanbanBoard: colonne (rinomina/elimina) + card (sposta/
+    // modifica/elimina). Edit e delete riusano gli handler task.
     board.addEventListener('click', (e) => {
+      const colRen = e.target.closest('[data-col-rename]');
+      const colRem = e.target.closest('[data-col-remove]');
       const moveBtn = e.target.closest('[data-board-move]');
       const editBtn = e.target.closest('[data-edit-task]');
       const deleteBtn = e.target.closest('[data-delete-task]');
 
+      if (colRen) { UI.handleRenameColumn(Boards.currentId(), colRen.dataset.colRename); return; }
+      if (colRem) { UI.handleRemoveColumn(Boards.currentId(), colRem.dataset.colRemove); return; }
       if (moveBtn) {
         const dir = parseInt(moveBtn.dataset.boardMove, 10);
         if (Tasks.moveByOffset(moveBtn.dataset.taskId, dir)) {
@@ -1603,10 +1946,136 @@ const UI = {
       e.preventDefault();
       zone.classList.remove('is-over');
       const id = draggingId || e.dataTransfer.getData('text/plain');
-      if (id && Tasks.setStatus(id, zone.dataset.dropzone)) {
+      if (id && Tasks.setColumn(id, zone.dataset.dropzone)) {
         DOM.renderTasks();
       }
     });
+  },
+
+  // ---- Gestione bacheche / colonne (Kanban multi-bacheca) ----
+
+  _textField(label, value = '', placeholder = '') {
+    return `<div class="form-group">
+      <label class="form-label" for="modalTextInput">${Utils.escapeHtml(label)}</label>
+      <input type="text" id="modalTextInput" class="input" value="${Utils.escapeHtml(value)}"
+             placeholder="${Utils.escapeHtml(placeholder)}" maxlength="40" autocomplete="off">
+    </div>`;
+  },
+
+  handleNewBoard() {
+    if (Boards.all().length >= Boards.MAX) { Toast.warning('Massimo ' + Boards.MAX + ' bacheche per spazio.'); return; }
+    Modal.open('Nuova bacheca', UI._textField('Nome bacheca', '', 'Es. Progetto, Sprint…'),
+      (body) => {
+        const v = body.querySelector('#modalTextInput').value.trim();
+        if (!v) { Toast.error('Inserisci un nome'); return false; }
+        Boards.create(v).then(b => { if (b) { DOM.renderTasks(); Toast.success('Bacheca creata'); } });
+        return true;
+      }, { confirmLabel: 'Crea' });
+  },
+
+  handleRenameBoard(id) {
+    const b = Boards.get(id);
+    if (!b) return;
+    Modal.open('Rinomina bacheca', UI._textField('Nome bacheca', b.name),
+      (body) => {
+        const v = body.querySelector('#modalTextInput').value.trim();
+        if (!v) { Toast.error('Inserisci un nome'); return false; }
+        Boards.rename(id, v).then(ok => { if (ok) { DOM.renderTasks(); Toast.success('Bacheca rinominata'); } });
+        return true;
+      }, { confirmLabel: 'Salva' });
+  },
+
+  handleDeleteBoard(id) {
+    const b = Boards.get(id);
+    if (!b) return;
+    AlertDialog.confirmDelete({
+      title: 'Elimina bacheca',
+      message: `Eliminare la bacheca "${b.name}" e tutte le sue attività? L'azione non è reversibile.`,
+      onConfirm: () => {
+        Boards.remove(id).then(ok => { if (ok) { DOM.renderTasks(); Toast.success('Bacheca eliminata'); } });
+      }
+    });
+  },
+
+  handleAddColumn(id) {
+    Modal.open('Nuova colonna', UI._textField('Nome colonna', '', 'Es. In revisione'),
+      (body) => {
+        const v = body.querySelector('#modalTextInput').value.trim();
+        if (!v) { Toast.error('Inserisci un nome'); return false; }
+        Boards.addColumn(id, v).then(ok => { if (ok) { DOM.renderTasks(); Toast.success('Colonna aggiunta'); } });
+        return true;
+      }, { confirmLabel: 'Aggiungi' });
+  },
+
+  handleRenameColumn(boardId, colId) {
+    const b = Boards.get(boardId);
+    const col = b && b.cols.find(c => c.id === colId);
+    if (!col) return;
+    Modal.open('Rinomina colonna', UI._textField('Nome colonna', col.label),
+      (body) => {
+        const v = body.querySelector('#modalTextInput').value.trim();
+        if (!v) { Toast.error('Inserisci un nome'); return false; }
+        Boards.renameColumn(boardId, colId, v).then(ok => { if (ok) { DOM.renderTasks(); } });
+        return true;
+      }, { confirmLabel: 'Salva' });
+  },
+
+  handleRemoveColumn(boardId, colId) {
+    const b = Boards.get(boardId);
+    const col = b && b.cols.find(c => c.id === colId);
+    if (!col) return;
+    AlertDialog.confirmDelete({
+      title: 'Elimina colonna',
+      message: `Eliminare la colonna "${col.label}"? Le attività verranno spostate nella prima colonna.`,
+      onConfirm: () => {
+        Boards.removeColumn(boardId, colId).then(ok => { if (ok) { DOM.renderTasks(); Toast.success('Colonna eliminata'); } });
+      }
+    });
+  },
+
+  handleBoardAccess(id) {
+    const b = Boards.get(id);
+    if (!b) return;
+    Modal.open('Accesso · ' + b.name,
+      '<p class="modal-hint">Chi è aggiunto vede e usa questa bacheca. Gli amministratori dello spazio vedono comunque tutte le bacheche.</p>' +
+      '<div id="boardAccessBody" class="board-access"><p class="board-access__loading">Caricamento…</p></div>',
+      () => true, { confirmLabel: 'Chiudi' });
+    UI._renderBoardAccess(id);
+  },
+
+  async _renderBoardAccess(id) {
+    const host = document.getElementById('boardAccessBody');
+    if (!host) return;
+    const esc = Utils.escapeHtml;
+    const uid = Boards._uid();
+    const [members, candidates] = await Promise.all([Boards.members(id), Boards.candidates(id)]);
+    if (!document.getElementById('boardAccessBody')) return; // modale chiusa nel frattempo
+
+    const memHtml = members.length ? members.map(m => `
+        <li class="board-access__row">
+          <span class="board-access__email">${esc(m.email)}${m.userId === uid ? ' <em>(tu)</em>' : ''}</span>
+          ${m.userId !== uid ? `<button class="btn btn--secondary btn--small" data-detach="${m.userId}">Rimuovi</button>` : ''}
+        </li>`).join('') : '<li class="board-access__empty">Solo tu, per ora.</li>';
+
+    const canHtml = candidates.length ? candidates.map(c => `
+        <li class="board-access__row">
+          <span class="board-access__email">${esc(c.email)}</span>
+          <button class="btn btn--primary btn--small" data-attach="${c.userId}">Aggiungi</button>
+        </li>`).join('') : '<li class="board-access__empty">Nessun altro collaboratore nello spazio.</li>';
+
+    host.innerHTML =
+      `<h4 class="board-access__title">Con accesso</h4><ul class="board-access__list">${memHtml}</ul>` +
+      `<h4 class="board-access__title">Collaboratori dello spazio</h4><ul class="board-access__list">${canHtml}</ul>`;
+
+    if (!host.dataset.bound) {
+      host.addEventListener('click', async (e) => {
+        const at = e.target.closest('[data-attach]');
+        const dt = e.target.closest('[data-detach]');
+        if (at) { if (await Boards.attach(id, at.dataset.attach)) { Toast.success('Collaboratore aggiunto'); UI._renderBoardAccess(id); } }
+        else if (dt) { if (await Boards.detach(id, dt.dataset.detach)) { Toast.success('Collaboratore rimosso'); UI._renderBoardAccess(id); } }
+      });
+      host.dataset.bound = '1';
+    }
   },
 
   setupAppointmentHandlers() {

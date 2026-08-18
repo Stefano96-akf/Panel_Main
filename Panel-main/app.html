@@ -324,16 +324,19 @@
         </div>
       </div>
 
-      <!-- Quick add -->
-      <div class="form-group board__add">
-        <label for="boardTaskInput" class="label">Aggiungi in "Da fare":</label>
+      <!-- Barra bacheche + intestazione (tab, rinomina, colonne, accesso) — reso da JS -->
+      <div id="boardControls" class="board-controls"></div>
+
+      <!-- Quick add: aggiunge nella prima colonna della bacheca attiva -->
+      <div class="form-group board__add" id="boardAddWrap">
+        <label for="boardTaskInput" class="label">Nuova attività:</label>
         <div class="input-group">
           <input
             type="text"
             id="boardTaskInput"
             class="input"
             placeholder="Cosa c'è da fare?"
-            aria-label="Nuova attività nella colonna Da fare"
+            aria-label="Nuova attività"
           >
           <button id="boardAddTaskBtn" class="btn btn--primary btn--small">
             <i class="fa-solid fa-plus"></i> Aggiungi
@@ -341,41 +344,8 @@
         </div>
       </div>
 
-      <!-- Board columns -->
-      <div id="kanbanBoard" class="kanban" aria-label="Bacheca attività">
-        <section class="kanban__column kanban__column--todo" data-status="todo" aria-labelledby="col-todo-title">
-          <header class="kanban__column-header">
-            <h3 id="col-todo-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--todo" aria-hidden="true"></span>
-              Da fare
-            </h3>
-            <span class="kanban__count" data-count="todo">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="todo" aria-label="Colonna Da fare"></div>
-        </section>
-
-        <section class="kanban__column kanban__column--doing" data-status="doing" aria-labelledby="col-doing-title">
-          <header class="kanban__column-header">
-            <h3 id="col-doing-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--doing" aria-hidden="true"></span>
-              In corso
-            </h3>
-            <span class="kanban__count" data-count="doing">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="doing" aria-label="Colonna In corso"></div>
-        </section>
-
-        <section class="kanban__column kanban__column--done" data-status="done" aria-labelledby="col-done-title">
-          <header class="kanban__column-header">
-            <h3 id="col-done-title" class="kanban__column-title">
-              <span class="kanban__dot kanban__dot--done" aria-hidden="true"></span>
-              Completato
-            </h3>
-            <span class="kanban__count" data-count="done">0</span>
-          </header>
-          <div class="kanban__list" data-dropzone="done" aria-label="Colonna Completato"></div>
-        </section>
-      </div>
+      <!-- Colonne della bacheca attiva — rese dinamicamente da JS -->
+      <div id="kanbanBoard" class="kanban" aria-label="Bacheca attività"></div>
     </section>
 
     <!-- Pagina: Collaboratori (visibile solo ai membri di un workspace) -->

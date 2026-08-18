@@ -36,8 +36,11 @@ const SupaSync = {
     },
     panel_tasks: {
       table: 'tasks',
-      toRow: (t, uid, ws) => ({ id: t.id, user_id: uid, workspace_id: ws, text: t.text || '', status: t.status || (t.completed ? 'done' : 'todo'), completed: !!t.completed, created_at: t.createdAt }),
-      toApp: (r) => ({ id: r.id, text: r.text, status: r.status, completed: !!r.completed, createdAt: r.created_at })
+      // board_id è NOT NULL in cloud: i task senza bacheca (orfani transitori)
+      // vengono esclusi dal push (li adotta Boards.ensureDefaultAndAdopt()).
+      filter: (r) => !!r.board_id,
+      toRow: (t, uid, ws) => ({ id: t.id, user_id: uid, workspace_id: ws, board_id: t.boardId || null, text: t.text || '', status: t.status || (t.completed ? 'done' : 'todo'), completed: !!t.completed, created_at: t.createdAt }),
+      toApp: (r) => ({ id: r.id, text: r.text, status: r.status, completed: !!r.completed, boardId: r.board_id, createdAt: r.created_at })
     },
     panel_appointments: {
       table: 'appointments',
@@ -72,7 +75,8 @@ const SupaSync = {
     const ws = SupaSync.ws();
     if (!conf || !ws) return;
     if (window.Workspace && !Workspace.canEdit(conf.table)) return; // sola lettura
-    const rows = (Storage.get(key, []) || []).map(x => conf.toRow(x, SupaSync.userId, ws));
+    let rows = (Storage.get(key, []) || []).map(x => conf.toRow(x, SupaSync.userId, ws));
+    if (conf.filter) rows = rows.filter(conf.filter);
     const ids = rows.map(r => r.id);
 
     if (rows.length) {
@@ -128,19 +132,30 @@ const SupaSync = {
     SupaSync.userId = user.id;
     if (!SupaSync.ws()) return;
     // seed solo se sono io a poter scrivere (owner del nuovo spazio)
-    if (window.Workspace && Workspace.canEdit('notes') &&
-        await SupaSync._cloudIsEmpty() && SupaSync._localHasData()) {
+    const seeding = window.Workspace && Workspace.canEdit('notes') &&
+        await SupaSync._cloudIsEmpty() && SupaSync._localHasData();
+    if (seeding) {
+      // le bacheche vanno preparate PRIMA del push: board_id è NOT NULL, quindi
+      // i task locali orfani vanno adottati in una bacheca esistente.
+      if (window.Boards) { await Boards.pull(); await Boards.ensureDefaultAndAdopt(); }
       await SupaSync.pushAll();
     }
     await SupaSync.pull();
+    if (window.Boards) { await Boards.pull(); await Boards.ensureDefaultAndAdopt(); }
+    SupaSync._rerender();
   },
 
   // Cambio workspace: azzera il locale delle sezioni e ricarica dal nuovo spazio.
   async switchWorkspace() {
     SupaSync._applyingRemote = true;
-    try { Object.keys(SupaSync.MAP).forEach(k => SupaSync._origStorageSet(k, [])); }
-    finally { SupaSync._applyingRemote = false; }
+    try {
+      Object.keys(SupaSync.MAP).forEach(k => SupaSync._origStorageSet(k, []));
+      SupaSync._origStorageSet(Storage.keys.boards, []);
+    } finally { SupaSync._applyingRemote = false; }
+    Storage.remove(Storage.keys.currentBoard);
     await SupaSync.pull();
+    if (window.Boards) { await Boards.pull(); await Boards.ensureDefaultAndAdopt(); }
+    SupaSync._rerender();
   },
 
   _rerender() {

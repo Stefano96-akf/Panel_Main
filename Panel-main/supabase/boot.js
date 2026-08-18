@@ -134,6 +134,9 @@
       SupaSync.userId = null;
       if (window.Workspace) Workspace.state.currentId = null;
       if (window.Profile) Profile.unmount();
+      // pulizia cache bacheche (evita che un altro account sullo stesso browser
+      // erediti le bacheche del precedente)
+      if (window.Storage) { Storage.remove(Storage.keys.boards); Storage.remove(Storage.keys.currentBoard); }
       unmountLogout();
       showGate(true);
     }
