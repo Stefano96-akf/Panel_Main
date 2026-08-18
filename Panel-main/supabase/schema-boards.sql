@@ -40,22 +40,28 @@ $$;
 revoke execute on function public.board_members_emails(uuid) from public, anon;
 grant  execute on function public.board_members_emails(uuid) to authenticated;
 
--- ---------- PARTE B · il flip (post-deploy) ----------
+-- ---------- PARTE B · il flip (post-deploy, APPLICATA) ----------
 
 -- Backfill di sicurezza: eventuali task senza bacheca → prima bacheca del loro
--- workspace (nel nostro caso i task sono ~0, quindi è un no-op difensivo).
--- update public.tasks t set board_id = (
---   select b.id from public.boards b
---   where b.workspace_id = t.workspace_id order by b.created_at limit 1
--- ) where t.board_id is null;
+-- workspace (nel nostro caso i task erano 0, quindi è stato un no-op difensivo).
+update public.tasks t set board_id = (
+  select b.id from public.boards b
+  where b.workspace_id = t.workspace_id order by b.created_at limit 1
+) where t.board_id is null;
 
--- alter table public.tasks alter column board_id set not null;
+alter table public.tasks alter column board_id set not null;
 
 -- RLS: da "membro del workspace" a "membro della bacheca" (+ permesso tasks).
--- drop policy if exists tasks_read on public.tasks;
--- create policy tasks_read on public.tasks for select
---   using (public.is_board_member(board_id));
--- drop policy if exists tasks_write on public.tasks;
--- create policy tasks_write on public.tasks for all
---   using (public.is_board_member(board_id) and public.can_edit(workspace_id, 'tasks'))
---   with check (public.is_board_member(board_id) and public.can_edit(workspace_id, 'tasks'));
+drop policy if exists tasks_read on public.tasks;
+create policy tasks_read on public.tasks for select
+  using (public.is_board_member(board_id));
+drop policy if exists tasks_write on public.tasks;
+create policy tasks_write on public.tasks for all
+  using (public.is_board_member(board_id) and public.can_edit(workspace_id, 'tasks'))
+  with check (public.is_board_member(board_id) and public.can_edit(workspace_id, 'tasks'));
+
+-- ---------- PARTE C · hardening (APPLICATA) ----------
+-- Le funzioni-trigger non vanno esposte come RPC: il firing del trigger NON
+-- richiede EXECUTE del chiamante, quindi la revoca è sicura.
+revoke execute on function public.board_add_creator() from public, anon, authenticated;
+revoke execute on function public.boards_limit()      from public, anon, authenticated;
