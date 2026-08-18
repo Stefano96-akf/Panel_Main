@@ -109,9 +109,9 @@
           <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
           <span>Bacheca</span>
         </a>
-        <a href="#section-appointments" class="app-sidebar__link" data-nav-target="section-appointments" title="Appuntamenti">
+        <a href="#section-appointments" class="app-sidebar__link" data-nav-target="section-appointments" title="Calendario">
           <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
-          <span>Appuntamenti</span>
+          <span>Calendario</span>
         </a>
         <a href="#section-team" class="app-sidebar__link perm-hidden" data-nav-target="section-team" title="Collaboratori">
           <i class="fa-solid fa-users" aria-hidden="true"></i>
@@ -282,56 +282,46 @@
     </section>
 
     <!-- Pagina: Appuntamenti -->
-    <section id="section-appointments" class="page panel" aria-labelledby="appts-title">
-      <h2 id="appts-title" class="panel__title">Appuntamenti</h2>
-
-      <div class="form-group">
-        <label for="apptDate" class="label">Data:</label>
-        <input type="date" id="apptDate" class="input">
-      </div>
-
-      <div class="form-group">
-        <label for="apptDesc" class="label">Descrizione:</label>
-        <input
-          type="text"
-          id="apptDesc"
-          class="input"
-          placeholder="Es. Riunione operativa"
-        >
-      </div>
-
-      <div class="form-group">
-        <label for="apptType" class="label">Tipo:</label>
-        <select id="apptType" class="input">
-          <option value="remote">Da remoto</option>
-          <option value="onsite">Onsite</option>
-        </select>
-      </div>
-
-      <button id="addApptBtn" class="btn btn--primary btn--small">
-        <i class="fa-solid fa-calendar-plus"></i> Aggiungi
-      </button>
-
-      <!-- Appointments Display -->
-      <div class="appts-columns">
-        <div class="appts-column">
-          <h4 class="appts-column__title">
-            <i class="fa-solid fa-video"></i> Da remoto
-          </h4>
-          <ul id="appointmentsRemote" class="appts-list" role="list">
-            <!-- Appointments rendered here -->
-          </ul>
-        </div>
-
-        <div class="appts-column">
-          <h4 class="appts-column__title">
-            <i class="fa-solid fa-location-dot"></i> Onsite
-          </h4>
-          <ul id="appointmentsOnsite" class="appts-list" role="list">
-            <!-- Appointments rendered here -->
-          </ul>
+    <section id="section-appointments" class="page panel cal-view cal-view--calendar" aria-labelledby="appts-title">
+      <div class="panel__header panel__header--clients">
+        <h2 id="appts-title" class="panel__title">Calendario</h2>
+        <div class="cal-toolbar__views">
+          <button type="button" class="btn btn--secondary btn--small is-active" data-cal-view="calendar">
+            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Calendario
+          </button>
+          <button type="button" class="btn btn--secondary btn--small" data-cal-view="list">
+            <i class="fa-solid fa-list-check" aria-hidden="true"></i> Lista
+          </button>
         </div>
       </div>
+
+      <div class="cal-toolbar">
+        <div class="cal-toolbar__nav">
+          <button type="button" id="calPrev" class="btn btn--secondary btn--small" aria-label="Mese precedente"><i class="fa-solid fa-arrow-left"></i></button>
+          <span id="calMonthLabel" class="cal-toolbar__month"></span>
+          <button type="button" id="calNext" class="btn btn--secondary btn--small" aria-label="Mese successivo"><i class="fa-solid fa-arrow-right"></i></button>
+          <button type="button" id="calToday" class="btn btn--secondary btn--small">Oggi</button>
+        </div>
+        <div class="cal-toolbar__filters">
+          <select id="calTypeFilter" class="input cal-toolbar__select" aria-label="Filtra per tipo">
+            <option value="all">Tutti i tipi</option>
+            <option value="remote">Da remoto</option>
+            <option value="onsite">Onsite</option>
+          </select>
+          <label class="cal-toolbar__check"><input type="checkbox" id="calShowCompleted" checked> Mostra completati</label>
+        </div>
+        <div class="cal-toolbar__actions">
+          <button type="button" id="addApptBtn" class="btn btn--primary btn--small"><i class="fa-solid fa-calendar-plus"></i> Aggiungi</button>
+          <button type="button" id="importApptsBtn" class="btn btn--secondary btn--small"><i class="fa-solid fa-inbox"></i> Importa</button>
+          <button type="button" id="exportApptsBtn" class="btn btn--secondary btn--small"><i class="fa-solid fa-download"></i> Esporta</button>
+        </div>
+      </div>
+
+      <!-- Vista calendario (griglia mensile) -->
+      <div id="calendarBody" class="cal" aria-label="Calendario appuntamenti"></div>
+
+      <!-- Vista lista -->
+      <ul id="apptListView" class="appts-list" role="list"></ul>
     </section>
 
     <!-- Pagina: Bacheca Kanban -->

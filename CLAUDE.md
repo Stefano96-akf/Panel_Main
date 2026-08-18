@@ -70,7 +70,7 @@ e inizializzato su `DOMContentLoaded`. Convenzione: ogni modulo è un `const Nom
 | `Notes` | CRUD note. |
 | `Tasks` | CRUD attività. Ogni task referenzia una bacheca (`boardId`) e una colonna (`status` = id colonna). |
 | `Boards` | Bacheche Kanban multiple (max 3) con colonne dinamiche `[{id,label}]`. Locale su `panel_boards`; in cloud è online-first (tabella `boards` + `board_members`, accesso ristretto per-bacheca) con cache localStorage. |
-| `Appointments` | CRUD appuntamenti (tipo `remote`/`onsite`), ordinati per data. |
+| `Appointments` | CRUD appuntamenti (tipo `remote`/`onsite`). UI "Calendario": griglia mensile + vista lista, filtri per tipo/completati, import/export CSV. |
 | `Toast` | Notifiche temporanee (success/error/warning/info). |
 | `Modal` | Modale unico riutilizzabile con focus trap, ESC, restore focus. |
 | `DOM` | Funzioni di rendering delle liste. Cache dei nodi principali. |

@@ -2423,6 +2423,145 @@ html.dark .kanban__list.is-over {
 }
 
 /* ============================================================================
+   CALENDARIO — toolbar, griglia mensile, chip, viste
+   ============================================================================ */
+
+.cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+.cal-toolbar__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.cal-toolbar__month {
+  min-width: 150px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.cal-toolbar__filters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+.cal-toolbar__select { width: auto; }
+.cal-toolbar__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.cal-toolbar__actions { display: inline-flex; gap: var(--spacing-xs); flex-wrap: wrap; }
+.cal-toolbar__views { display: inline-flex; gap: var(--spacing-xs); }
+.cal-toolbar__views .is-active,
+[data-cal-view].is-active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+/* Griglia */
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.cal__grid--dow { margin-bottom: 6px; }
+.cal__dow {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: var(--spacing-xs) 0;
+}
+.cal__cell {
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--spacing-xs);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-in-out),
+              box-shadow var(--duration-fast) var(--ease-in-out);
+}
+.cal__cell:hover { border-color: var(--color-primary); }
+.cal__cell:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.cal__cell.is-other { opacity: 0.45; }
+.cal__cell.is-today {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.cal__daynum {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  align-self: flex-end;
+}
+.cal__cell.is-today .cal__daynum { color: var(--color-primary); }
+.cal__chips { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+.cal__chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+  padding: 2px var(--spacing-xs);
+  border: none;
+  border-left: 3px solid var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal__chip--remote { border-left-color: var(--color-accent); }
+.cal__chip--onsite { border-left-color: var(--color-warning); }
+.cal__chip.is-done { opacity: 0.55; text-decoration: line-through; }
+.cal__chip:hover { background: var(--color-bg-tertiary, var(--color-primary-light)); }
+.cal__more { font-size: var(--font-size-xs); color: var(--color-text-muted); padding-left: var(--spacing-xs); }
+
+/* Badge tipo nella lista */
+.appt-item__type {
+  font-weight: var(--font-weight-semibold);
+}
+.appt-item__type--remote { color: var(--color-text-secondary); }
+.appt-item__type--onsite { color: var(--color-warning); }
+.appt-item--completed .appt-item__desc { text-decoration: line-through; color: var(--color-text-muted); }
+.appt-item__content { cursor: pointer; }
+.appt-complete {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* Commutazione viste calendario / lista */
+.cal-view--calendar #apptListView { display: none; }
+.cal-view--list #calendarBody { display: none; }
+.cal-view--list .cal-toolbar__nav { display: none; }
+
+@media (max-width: 640px) {
+  .cal__cell { min-height: 68px; }
+  .cal__chip { font-size: 10px; }
+}
+
+/* ============================================================================
    LAYOUT A PAGINE — una sezione (tab) visibile per volta, centrata
    ============================================================================ */
 .container {

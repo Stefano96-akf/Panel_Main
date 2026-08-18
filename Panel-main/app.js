@@ -249,6 +249,25 @@ const Utils = {
     return rows.slice(1)
       .filter(r => r.some(v => (v || '').trim() !== ''))
       .map(r => { const o = {}; headers.forEach((h, i) => { o[h] = (r[i] != null ? r[i] : '').trim(); }); return o; });
+  },
+
+  // Normalizza una data in 'YYYY-MM-DD' (accetta anche DD/MM/YYYY, DD-MM-YY, ...)
+  normalizeDate(str) {
+    str = String(str || '').trim();
+    if (!str) return '';
+    let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = str.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+    if (m) {
+      let d = m[1], mo = m[2], y = m[3];
+      if (y.length === 2) y = '20' + y;
+      return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    const dt = new Date(str);
+    if (!isNaN(dt.getTime())) {
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    }
+    return '';
   }
 };
 
@@ -1040,6 +1059,20 @@ const Appointments = {
     return true;
   },
 
+  update(id, patch) {
+    const appointments = Appointments.getAll();
+    const appt = appointments.find(a => a.id === id);
+    if (!appt) return false;
+    if (patch.date !== undefined) appt.date = patch.date || '';
+    if (patch.description !== undefined) appt.description = patch.description || '';
+    if (patch.type !== undefined) appt.type = patch.type || 'remote';
+    if (patch.completed !== undefined) appt.completed = !!patch.completed;
+    Appointments.save(appointments);
+    return true;
+  },
+
+  get(id) { return Appointments.getAll().find(a => a.id === id) || null; },
+
   delete(id) {
     const appointments = Appointments.getAll();
     const filtered = appointments.filter(a => a.id !== id);
@@ -1050,11 +1083,59 @@ const Appointments = {
   getByType(type) {
     return Appointments.getAll()
       .filter(a => a.type === type)
-      .sort((a, b) => {
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(a.date) - new Date(b.date);
-      });
+      .sort(Appointments._byDate);
+  },
+
+  _byDate(a, b) {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+  },
+
+  _match(a, filters) {
+    const f = filters || {};
+    if (f.type && f.type !== 'all' && a.type !== f.type) return false;
+    if (f.showCompleted === false && a.completed) return false;
+    return true;
+  },
+
+  // Tutti gli appuntamenti filtrati, ordinati per data
+  getFiltered(filters) {
+    return Appointments.getAll().filter(a => Appointments._match(a, filters)).sort(Appointments._byDate);
+  },
+
+  // Appuntamenti di un giorno (dateStr 'YYYY-MM-DD'), filtrati
+  forDate(dateStr, filters) {
+    return Appointments.getAll()
+      .filter(a => a.date === dateStr && Appointments._match(a, filters))
+      .sort(Appointments._byDate);
+  },
+
+  // Import da righe CSV mappate ({ data, descrizione, tipo })
+  importRows(rows) {
+    const appts = Appointments.getAll();
+    let added = 0, skipped = 0;
+    rows.forEach(r => {
+      const description = (r.descrizione || '').trim();
+      if (!description) { skipped++; return; }
+      const date = Utils.normalizeDate(r.data || '');
+      const t = (r.tipo || '').trim().toLowerCase();
+      const type = /onsite|sede|presenza|on-site|fisic/.test(t) ? 'onsite' : 'remote';
+      appts.unshift({ id: Utils.generateId(), date, description, type, completed: false, createdAt: new Date().toISOString() });
+      added++;
+    });
+    Appointments.save(appts);
+    return { added, skipped };
+  },
+
+  toCSV() {
+    const rows = Appointments.getFiltered({}).map(a => ({
+      Data: a.date || '',
+      Descrizione: a.description || '',
+      Tipo: a.type === 'onsite' ? 'Onsite' : 'Da remoto',
+      Completato: a.completed ? 'sì' : 'no'
+    }));
+    return Utils.arrayToCsv(rows, ['Data', 'Descrizione', 'Tipo', 'Completato']);
   }
 };
 
@@ -1285,8 +1366,6 @@ const DOM = {
   clientsList: document.getElementById('clientsList'),
   notesList: document.getElementById('notesList'),
   tasksList: document.getElementById('tasksList'),
-  appointmentsRemote: document.getElementById('appointmentsRemote'),
-  appointmentsOnsite: document.getElementById('appointmentsOnsite'),
   clientSearch: document.getElementById('clientSearch'),
 
   // Clients rendering
@@ -1557,37 +1636,85 @@ const DOM = {
   },
 
   // Appointments rendering
+  // Entry point: ridisegna calendario + lista (rispetta la vista/filtri correnti)
   renderAppointments() {
-    const remote = Appointments.getByType('remote');
-    const onsite = Appointments.getByType('onsite');
-
-    DOM.appointmentsRemote.innerHTML = DOM.createAppointmentsHtml(remote);
-    DOM.appointmentsOnsite.innerHTML = DOM.createAppointmentsHtml(onsite);
+    DOM.renderCalendar();
+    DOM.renderApptList();
   },
 
-  createAppointmentsHtml(appointments) {
-    if (appointments.length === 0) {
-      return `<div class="appts-list__empty">Nessun appuntamento</div>`;
+  _calDows: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+  _calState() {
+    return (typeof UI !== 'undefined' && UI.calState) ? UI.calState
+      : { year: new Date().getFullYear(), month: new Date().getMonth(), type: 'all', showCompleted: true, view: 'calendar' };
+  },
+  _dateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+  _dayLabel(ds) {
+    if (!ds) return 'Senza data';
+    const d = new Date(ds + 'T00:00:00');
+    return isNaN(d.getTime()) ? ds : d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+  },
+
+  renderCalendar() {
+    const host = document.getElementById('calendarBody');
+    if (!host) return;
+    const st = DOM._calState();
+    const filters = { type: st.type, showCompleted: st.showCompleted };
+    const y = st.year, m = st.month;
+    const first = new Date(y, m, 1);
+    const startWeekday = (first.getDay() + 6) % 7; // Lun=0 … Dom=6
+    const todayStr = DOM._dateStr(new Date());
+    const esc = Utils.escapeHtml;
+
+    const label = document.getElementById('calMonthLabel');
+    if (label) {
+      const ml = first.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      label.textContent = ml.charAt(0).toUpperCase() + ml.slice(1);
     }
 
-    return appointments.map(appt => `
-      <li class="appt-item">
-        <input type="checkbox" class="appt-item__checkbox" 
-               data-toggle-appt="${appt.id}" 
-               ${appt.completed ? 'checked' : ''}>
-        <div class="appt-item__content">
-          <div class="appt-item__date">${appt.date || 'Senza data'}</div>
-          <div class="appt-item__desc">${Utils.escapeHtml(appt.description)}</div>
+    const head = DOM._calDows.map(d => `<div class="cal__dow">${d}</div>`).join('');
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(y, m, i - startWeekday + 1);
+      const ds = DOM._dateStr(cellDate);
+      const inMonth = cellDate.getMonth() === m;
+      const isToday = ds === todayStr;
+      const appts = Appointments.forDate(ds, filters);
+      const shown = appts.slice(0, 3);
+      const chips = shown.map(a => `
+        <button type="button" class="cal__chip cal__chip--${a.type}${a.completed ? ' is-done' : ''}" data-appt="${a.id}" title="${esc(a.description)}">${esc(a.description)}</button>`).join('');
+      const more = appts.length > shown.length ? `<span class="cal__more">+${appts.length - shown.length}</span>` : '';
+      cells.push(`
+        <div class="cal__cell${inMonth ? '' : ' is-other'}${isToday ? ' is-today' : ''}" data-cal-day="${ds}" tabindex="0">
+          <div class="cal__daynum">${cellDate.getDate()}</div>
+          <div class="cal__chips">${chips}${more}</div>
+        </div>`);
+    }
+    host.innerHTML =
+      `<div class="cal__grid cal__grid--dow">${head}</div>` +
+      `<div class="cal__grid cal__grid--days">${cells.join('')}</div>`;
+  },
+
+  renderApptList() {
+    const host = document.getElementById('apptListView');
+    if (!host) return;
+    const st = DOM._calState();
+    const list = Appointments.getFiltered({ type: st.type, showCompleted: st.showCompleted });
+    if (!list.length) { host.innerHTML = `<div class="appts-list__empty">Nessun appuntamento</div>`; return; }
+    const esc = Utils.escapeHtml;
+    host.innerHTML = list.map(a => `
+      <li class="appt-item${a.completed ? ' appt-item--completed' : ''}">
+        <input type="checkbox" class="appt-item__checkbox" data-toggle-appt="${a.id}" ${a.completed ? 'checked' : ''} aria-label="Completato">
+        <div class="appt-item__content" data-edit-appt="${a.id}">
+          <div class="appt-item__date">${DOM._dayLabel(a.date)} · <span class="appt-item__type appt-item__type--${a.type}">${a.type === 'onsite' ? 'Onsite' : 'Da remoto'}</span></div>
+          <div class="appt-item__desc">${esc(a.description)}</div>
         </div>
         <div class="appt-item__actions">
-          <button class="appt-item__action-btn" 
-                  title="Elimina"
-                  data-delete-appt="${appt.id}">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          <button class="appt-item__action-btn" title="Modifica" data-edit-appt="${a.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="appt-item__action-btn appt-item__action-btn--delete" title="Elimina" data-delete-appt="${a.id}"><i class="fa-solid fa-trash"></i></button>
         </div>
-      </li>
-    `).join('');
+      </li>`).join('');
   },
   // Assets rendering
   renderAssets() {
@@ -2469,63 +2596,118 @@ const UI = {
   },
 
   setupAppointmentHandlers() {
-    const addBtn = document.getElementById('addApptBtn');
+    const now = new Date();
+    UI.calState = { year: now.getFullYear(), month: now.getMonth(), type: 'all', showCompleted: true, view: 'calendar' };
+    const $ = (id) => document.getElementById(id);
 
-    addBtn?.addEventListener('click', () => UI.handleAddAppointment());
+    $('calPrev')?.addEventListener('click', () => UI.calShift(-1));
+    $('calNext')?.addEventListener('click', () => UI.calShift(1));
+    $('calToday')?.addEventListener('click', () => {
+      const d = new Date();
+      UI.calState.year = d.getFullYear(); UI.calState.month = d.getMonth();
+      DOM.renderAppointments();
+    });
+    $('calTypeFilter')?.addEventListener('change', (e) => { UI.calState.type = e.target.value; DOM.renderAppointments(); });
+    $('calShowCompleted')?.addEventListener('change', (e) => { UI.calState.showCompleted = e.target.checked; DOM.renderAppointments(); });
+    $('addApptBtn')?.addEventListener('click', () => UI.handleAddAppointment());
+    $('importApptsBtn')?.addEventListener('click', () => UI.handleImportAppts());
+    $('exportApptsBtn')?.addEventListener('click', () => UI.handleExportAppts());
 
-    document.getElementById('appointmentsRemote').addEventListener('change', (e) => {
-      const checkbox = e.target.closest('[data-toggle-appt]');
-      if (checkbox) {
-        const apptId = checkbox.dataset.toggleAppt;
-        Appointments.toggle(apptId);
-        DOM.renderAppointments();
-      }
+    document.querySelectorAll('[data-cal-view]').forEach(btn =>
+      btn.addEventListener('click', () => UI.setCalView(btn.dataset.calView)));
+
+    // Calendario: click su giorno (aggiungi) o su chip (modifica)
+    $('calendarBody')?.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-appt]');
+      if (chip) { UI.handleEditAppointment(chip.dataset.appt); return; }
+      const cell = e.target.closest('[data-cal-day]');
+      if (cell) UI.handleAddAppointment(cell.dataset.calDay);
+    });
+    $('calendarBody')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { const cell = e.target.closest('[data-cal-day]'); if (cell) UI.handleAddAppointment(cell.dataset.calDay); }
     });
 
-    document.getElementById('appointmentsOnsite').addEventListener('change', (e) => {
-      const checkbox = e.target.closest('[data-toggle-appt]');
-      if (checkbox) {
-        const apptId = checkbox.dataset.toggleAppt;
-        Appointments.toggle(apptId);
-        DOM.renderAppointments();
-      }
+    // Lista: toggle completato / modifica / elimina
+    $('apptListView')?.addEventListener('change', (e) => {
+      const cb = e.target.closest('[data-toggle-appt]');
+      if (cb) { Appointments.toggle(cb.dataset.toggleAppt); DOM.renderAppointments(); }
+    });
+    $('apptListView')?.addEventListener('click', (e) => {
+      const del = e.target.closest('[data-delete-appt]');
+      const edit = e.target.closest('[data-edit-appt]');
+      if (del) { UI.handleDeleteAppointment(del.dataset.deleteAppt); return; }
+      if (edit) UI.handleEditAppointment(edit.dataset.editAppt);
     });
 
-    // Event delegation for delete
-    document.getElementById('appointmentsRemote').addEventListener('click', (e) => {
-      const deleteBtn = e.target.closest('[data-delete-appt]');
-      if (deleteBtn) {
-        const apptId = deleteBtn.dataset.deleteAppt;
-        UI.handleDeleteAppointment(apptId);
-      }
-    });
-
-    document.getElementById('appointmentsOnsite').addEventListener('click', (e) => {
-      const deleteBtn = e.target.closest('[data-delete-appt]');
-      if (deleteBtn) {
-        const apptId = deleteBtn.dataset.deleteAppt;
-        UI.handleDeleteAppointment(apptId);
-      }
-    });
-
+    UI.setCalView('calendar');
     DOM.renderAppointments();
   },
 
-  handleAddAppointment() {
-    const date = document.getElementById('apptDate').value;
-    const desc = document.getElementById('apptDesc').value;
-    const type = document.getElementById('apptType').value;
-
-    if (!Validators.isNotEmpty(desc)) {
-      Toast.error('Descrizione richiesta');
-      return;
+  setCalView(view) {
+    UI.calState.view = (view === 'list') ? 'list' : 'calendar';
+    const section = document.getElementById('section-appointments');
+    if (section) {
+      section.classList.toggle('cal-view--list', UI.calState.view === 'list');
+      section.classList.toggle('cal-view--calendar', UI.calState.view === 'calendar');
     }
-
-    Appointments.add(date, desc, type);
-    document.getElementById('apptDate').value = '';
-    document.getElementById('apptDesc').value = '';
+    document.querySelectorAll('[data-cal-view]').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.calView === UI.calState.view));
     DOM.renderAppointments();
-    Toast.success('Appuntamento aggiunto');
+  },
+
+  calShift(delta) {
+    let m = UI.calState.month + delta, y = UI.calState.year;
+    if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
+    UI.calState.month = m; UI.calState.year = y;
+    DOM.renderAppointments();
+  },
+
+  // Contenuto modale del form appuntamento (aggiungi/modifica)
+  _apptForm(a) {
+    a = a || {};
+    const esc = Utils.escapeHtml;
+    return `
+      <div class="form-group"><label class="label" for="apptFormDate">Data</label>
+        <input type="date" id="apptFormDate" class="input" value="${esc(a.date || '')}"></div>
+      <div class="form-group"><label class="label" for="apptFormDesc">Descrizione</label>
+        <input type="text" id="apptFormDesc" class="input" value="${esc(a.description || '')}" placeholder="Es. Riunione operativa"></div>
+      <div class="form-group"><label class="label" for="apptFormType">Tipo</label>
+        <select id="apptFormType" class="input">
+          <option value="remote"${a.type !== 'onsite' ? ' selected' : ''}>Da remoto</option>
+          <option value="onsite"${a.type === 'onsite' ? ' selected' : ''}>Onsite</option>
+        </select></div>`;
+  },
+
+  handleAddAppointment(dateStr) {
+    Modal.open('Nuovo appuntamento', UI._apptForm({ date: dateStr || '' }), (body) => {
+      const date = body.querySelector('#apptFormDate').value;
+      const desc = body.querySelector('#apptFormDesc').value.trim();
+      const type = body.querySelector('#apptFormType').value;
+      if (!desc) { Toast.error('Descrizione richiesta'); return false; }
+      Appointments.add(date, desc, type);
+      DOM.renderAppointments();
+      Toast.success('Appuntamento aggiunto');
+      return true;
+    }, { confirmLabel: 'Aggiungi' });
+  },
+
+  handleEditAppointment(id) {
+    const a = Appointments.get(id);
+    if (!a) return;
+    Modal.open('Modifica appuntamento',
+      UI._apptForm(a) +
+      `<label class="appt-complete"><input type="checkbox" id="apptFormDone"${a.completed ? ' checked' : ''}> Completato</label>`,
+      (body) => {
+        const date = body.querySelector('#apptFormDate').value;
+        const desc = body.querySelector('#apptFormDesc').value.trim();
+        const type = body.querySelector('#apptFormType').value;
+        const completed = body.querySelector('#apptFormDone').checked;
+        if (!desc) { Toast.error('Descrizione richiesta'); return false; }
+        Appointments.update(id, { date, description: desc, type, completed });
+        DOM.renderAppointments();
+        Toast.success('Appuntamento aggiornato');
+        return true;
+      }, { confirmLabel: 'Salva' });
   },
 
   handleDeleteAppointment(apptId) {
@@ -2538,6 +2720,55 @@ const UI = {
         Toast.success('Appuntamento eliminato');
       }
     });
+  },
+
+  handleImportAppts() {
+    Modal.open('Importa appuntamenti (CSV)',
+      '<p class="modal-hint">Colonne riconosciute: <b>Data</b> (AAAA-MM-GG o GG/MM/AAAA), <b>Descrizione</b>, <b>Tipo</b> (remoto/onsite). Separatore , o ;</p>' +
+      '<div class="form-group"><label class="label" for="apptCsvFile">File .csv</label>' +
+        '<input type="file" id="apptCsvFile" class="input" accept=".csv,text/csv"></div>' +
+      '<div class="form-group"><label class="label" for="apptCsvText">…oppure incolla il CSV</label>' +
+        '<textarea id="apptCsvText" class="input textarea" rows="6" placeholder="Data,Descrizione,Tipo"></textarea></div>' +
+      '<p class="profile-msg" id="apptCsvMsg" role="status"></p>',
+      (body) => {
+        const fileEl = body.querySelector('#apptCsvFile');
+        const textEl = body.querySelector('#apptCsvText');
+        const run = (text) => {
+          const res = UI._importApptsText(text);
+          if (res == null) { const m = body.querySelector('#apptCsvMsg'); if (m) { m.textContent = 'CSV non valido o colonna "Descrizione" non trovata.'; m.className = 'profile-msg is-err'; } return; }
+          Modal.close();
+          Toast.success(`Importati ${res.added} appuntamenti` + (res.skipped ? ` (${res.skipped} saltati)` : ''));
+        };
+        if (fileEl && fileEl.files && fileEl.files[0]) {
+          const reader = new FileReader();
+          reader.onload = () => run(String(reader.result || ''));
+          reader.readAsText(fileEl.files[0]);
+          return false;
+        }
+        run(textEl ? textEl.value : '');
+        return false;
+      }, { confirmLabel: 'Importa' });
+  },
+
+  _importApptsText(text) {
+    const rows = Utils.csvToArray(text);
+    if (!rows.length) return null;
+    const keyOf = (obj, re) => Object.keys(obj).find(k => re.test(k));
+    const s = rows[0];
+    const kData = keyOf(s, /^(data|date|giorno|quando)$/i);
+    const kDesc = keyOf(s, /^(descrizione|description|desc|oggetto|titolo|nome|note)$/i);
+    const kTipo = keyOf(s, /^(tipo|type|modalit)/i);
+    if (!kDesc) return null;
+    const mapped = rows.map(r => ({ data: kData ? r[kData] : '', descrizione: r[kDesc] || '', tipo: kTipo ? r[kTipo] : '' }));
+    const res = Appointments.importRows(mapped);
+    DOM.renderAppointments();
+    return res;
+  },
+
+  handleExportAppts() {
+    if (Appointments.getAll().length === 0) { Toast.warning('Nessun appuntamento da esportare'); return; }
+    Utils.downloadCsv(Appointments.toCSV(), `appuntamenti_${Utils.getCurrentDateString()}.csv`);
+    Toast.success('Appuntamenti esportati');
   },
 
   setupExportHandlers() {
