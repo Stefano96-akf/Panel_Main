@@ -1791,7 +1791,41 @@ const DOM = {
         </div>
       </li>`).join('');
   },
-  // Dashboard analytics rendering
+  // Palette per i grafici a torta (leggibile in light e dark)
+  PIE_COLORS: ['#b9ff66', '#8ed0ff', '#ffd166', '#c9a7ff', '#ff9db1', '#7ee0c0', '#f0a868', '#a0aec0'],
+
+  // Donut SVG multi-segmento da [{label,value,color}]; centerLabel opzionale.
+  _donut(segments, centerLabel) {
+    const total = segments.reduce((s, x) => s + (x.value || 0), 0);
+    const r = 26, cx = 32, cy = 32, C = 2 * Math.PI * r;
+    let acc = 0;
+    const arcs = total <= 0
+      ? `<circle cx="${cx}" cy="${cy}" r="${r}" class="pie__empty"></circle>`
+      : segments.filter(s => s.value > 0).map(s => {
+          const frac = s.value / total;
+          const dash = `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`;
+          const off = (-acc * C).toFixed(2);
+          acc += frac;
+          return `<circle cx="${cx}" cy="${cy}" r="${r}" class="pie__seg" stroke="${s.color}"
+            stroke-dasharray="${dash}" stroke-dashoffset="${off}" transform="rotate(-90 ${cx} ${cy})"></circle>`;
+        }).join('');
+    const center = (centerLabel != null)
+      ? `<text x="${cx}" y="${cy + 4}" text-anchor="middle" class="pie__center">${Utils.escapeHtml(String(centerLabel))}</text>` : '';
+    return `<svg class="pie" viewBox="0 0 64 64" width="118" height="118" role="img">${arcs}${center}</svg>`;
+  },
+
+  _legend(segments) {
+    const total = segments.reduce((s, x) => s + (x.value || 0), 0);
+    return `<ul class="pie-legend">` + segments.map(s => {
+      const pct = total ? Math.round(s.value / total * 100) : 0;
+      return `<li class="pie-legend__item">` +
+        `<span class="pie-legend__dot" style="background:${s.color}"></span>` +
+        `<span class="pie-legend__label" title="${Utils.escapeHtml(s.label)}">${Utils.escapeHtml(s.label)}</span>` +
+        `<span class="pie-legend__val">${s.value} · ${pct}%</span></li>`;
+    }).join('') + `</ul>`;
+  },
+
+  // Dashboard analytics rendering (KPI + diagrammi a torta + attività recenti)
   renderDashboard() {
     const host = document.getElementById('dashboardBody');
     if (!host) return;
@@ -1801,50 +1835,50 @@ const DOM = {
     const gs = Dashboard.groupStats();
     const recent = Dashboard.recent(6);
     const esc = Utils.escapeHtml;
+    const COL = DOM.PIE_COLORS, gray = '#a0aec0';
 
-    const card = (icon, label, value, target) => `
+    const kpi = (icon, label, value, target) => `
       <button type="button" class="dash-kpi" data-nav-target="${target}">
         <span class="dash-kpi__icon"><i class="fa-solid ${icon}"></i></span>
         <span class="dash-kpi__value">${value}</span>
         <span class="dash-kpi__label">${label}</span>
       </button>`;
-
-    const bar = (label, count, max) => {
-      const pct = max ? Math.round(count / max * 100) : 0;
-      return `<div class="dash-bar"><span class="dash-bar__label" title="${esc(label)}">${esc(label)}</span>` +
-        `<span class="dash-bar__track"><span class="dash-bar__fill" style="width:${pct}%"></span></span>` +
-        `<span class="dash-bar__val">${count}</span></div>`;
-    };
-
-    const r = 26, circ = 2 * Math.PI * r;
-    const donut = `
-      <svg class="dash-donut" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-        <circle cx="32" cy="32" r="${r}" class="dash-donut__bg"></circle>
-        <circle cx="32" cy="32" r="${r}" class="dash-donut__fg" transform="rotate(-90 32 32)"
-          stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${(circ * (1 - ts.pct / 100)).toFixed(1)}"></circle>
-        <text x="32" y="37" text-anchor="middle" class="dash-donut__txt">${ts.pct}%</text>
-      </svg>`;
-
     const kpis =
-      card('fa-up-right-from-square', 'Elementi', s.clients, 'section-clients') +
-      card('fa-layer-group', 'Asset', s.assets, 'section-assets') +
-      card('fa-note-sticky', 'Note', s.notes, 'section-notes') +
-      card('fa-list-check', 'Attività', s.tasks, 'section-board') +
-      card('fa-calendar-days', 'Appuntamenti', s.appts, 'section-appointments') +
-      card('fa-table-columns', 'Bacheche', s.boards, 'section-board');
+      kpi('fa-up-right-from-square', 'Elementi', s.clients, 'section-clients') +
+      kpi('fa-layer-group', 'Asset', s.assets, 'section-assets') +
+      kpi('fa-note-sticky', 'Note', s.notes, 'section-notes') +
+      kpi('fa-list-check', 'Attività', s.tasks, 'section-board') +
+      kpi('fa-calendar-days', 'Appuntamenti', s.appts, 'section-appointments') +
+      kpi('fa-table-columns', 'Bacheche', s.boards, 'section-board');
 
-    const maxBoard = Math.max(1, ...ts.perBoard.map(b => b.count));
-    const boardBars = ts.perBoard.length ? ts.perBoard.map(b => bar(b.name, b.count, maxBoard)).join('') : '<p class="dash-empty">Nessuna bacheca.</p>';
+    const pieCard = (title, segments, centerLabel) => `
+      <section class="dash-card">
+        <h3 class="dash-card__title">${title}</h3>
+        <div class="pie-wrap">${DOM._donut(segments, centerLabel)}${DOM._legend(segments)}</div>
+      </section>`;
 
-    const maxG = Math.max(1, gs.none, ...gs.top.map(g => g.count));
-    const groupBars = (gs.top.length || gs.none)
-      ? gs.top.map(g => bar(g.name, g.count, maxG)).join('') + bar('Senza gruppo', gs.none, maxG)
-      : '<p class="dash-empty">Nessun gruppo.</p>';
-
-    const maxA = Math.max(1, as.remote, as.onsite);
-    const apptBars = as.total
-      ? bar('Da remoto', as.remote, maxA) + bar('Onsite', as.onsite, maxA)
-      : '<p class="dash-empty">Nessun appuntamento.</p>';
+    const compSeg = [
+      { label: 'Completate', value: ts.done, color: COL[0] },
+      { label: 'Da fare', value: Math.max(0, ts.total - ts.done), color: gray }
+    ];
+    const boardSeg = ts.perBoard.length
+      ? ts.perBoard.map((b, i) => ({ label: b.name, value: b.count, color: COL[i % COL.length] }))
+      : [{ label: 'Nessuna attività', value: 0, color: gray }];
+    const groupSeg = (gs.top.length || gs.none)
+      ? gs.top.map((g, i) => ({ label: g.name, value: g.count, color: COL[i % COL.length] }))
+          .concat(gs.none ? [{ label: 'Senza gruppo', value: gs.none, color: gray }] : [])
+      : [{ label: 'Nessun elemento', value: 0, color: gray }];
+    const apptSeg = [
+      { label: 'Da remoto', value: as.remote, color: COL[1] },
+      { label: 'Onsite', value: as.onsite, color: COL[2] }
+    ];
+    const contentSeg = [
+      { label: 'Elementi', value: s.clients, color: COL[0] },
+      { label: 'Note', value: s.notes, color: COL[1] },
+      { label: 'Attività', value: s.tasks, color: COL[2] },
+      { label: 'Appuntamenti', value: s.appts, color: COL[3] },
+      { label: 'Asset', value: s.assets, color: COL[4] }
+    ];
 
     const recentHtml = recent.length ? recent.map(i => `
       <li class="dash-recent__item">
@@ -1856,26 +1890,19 @@ const DOM = {
     host.innerHTML = `
       <div class="dash-kpis">${kpis}</div>
       <div class="dash-grid">
+        ${pieCard('Attività completate', compSeg, ts.pct + '%')}
+        ${pieCard('Attività per bacheca', boardSeg)}
         <section class="dash-card">
-          <h3 class="dash-card__title">Attività completate</h3>
-          <div class="dash-completion">${donut}<div class="dash-completion__meta"><b>${ts.done}</b> su ${ts.total}<br><span class="dash-muted">completate</span></div></div>
-          <h4 class="dash-card__sub">Attività per bacheca</h4>
-          <div class="dash-bars">${boardBars}</div>
-        </section>
-        <section class="dash-card">
-          <h3 class="dash-card__title">Calendario</h3>
+          <h3 class="dash-card__title">Appuntamenti</h3>
           <div class="dash-mini">
             <div class="dash-mini__stat"><b>${as.upcoming}</b><span>In arrivo</span></div>
             <div class="dash-mini__stat"><b>${as.completed}</b><span>Completati</span></div>
             <div class="dash-mini__stat"><b>${as.total}</b><span>Totale</span></div>
           </div>
-          <h4 class="dash-card__sub">Per tipo</h4>
-          <div class="dash-bars">${apptBars}</div>
+          <div class="pie-wrap">${DOM._donut(apptSeg)}${DOM._legend(apptSeg)}</div>
         </section>
-        <section class="dash-card">
-          <h3 class="dash-card__title">Elementi per gruppo</h3>
-          <div class="dash-bars">${groupBars}</div>
-        </section>
+        ${pieCard('Elementi per gruppo', groupSeg)}
+        ${pieCard('Composizione contenuti', contentSeg)}
         <section class="dash-card">
           <h3 class="dash-card__title">Attività recenti</h3>
           <ul class="dash-recent">${recentHtml}</ul>
