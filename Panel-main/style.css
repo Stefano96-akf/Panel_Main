@@ -2562,6 +2562,107 @@ html.dark .kanban__list.is-over {
 }
 
 /* ============================================================================
+   DASHBOARD — KPI, grafici a barre, donut completamento, attività recenti
+   ============================================================================ */
+.dashboard { display: flex; flex-direction: column; gap: var(--spacing-xl); }
+
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-md);
+}
+.dash-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-in-out),
+              box-shadow var(--duration-fast) var(--ease-in-out),
+              transform var(--duration-fast) var(--ease-in-out);
+}
+.dash-kpi:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.dash-kpi__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-text-primary);
+}
+.dash-kpi__value { font-size: var(--font-size-2xl, 1.6rem); font-weight: var(--font-weight-bold); color: var(--color-text-primary); line-height: 1; }
+.dash-kpi__label { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+.dash-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+.dash-card__title { margin: 0 0 var(--spacing-md); font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+.dash-card__sub { margin: var(--spacing-md) 0 var(--spacing-sm); font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+
+.dash-bars { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.dash-bar { display: flex; align-items: center; gap: var(--spacing-sm); }
+.dash-bar__label {
+  flex: 0 0 34%; max-width: 34%;
+  font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-bar__track { flex: 1; height: 8px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-pill); overflow: hidden; }
+.dash-bar__fill { display: block; height: 100%; background: var(--color-accent); border-radius: var(--radius-pill); transition: width var(--duration-normal) var(--ease-in-out); }
+.dash-bar__val { flex: 0 0 auto; min-width: 20px; text-align: right; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+
+.dash-completion { display: flex; align-items: center; gap: var(--spacing-lg); }
+.dash-donut__bg { fill: none; stroke: var(--color-border); stroke-width: 8; }
+.dash-donut__fg { fill: none; stroke: var(--color-primary); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset var(--duration-normal) var(--ease-in-out); }
+.dash-donut__txt { fill: var(--color-text-primary); font-size: 15px; font-weight: 700; }
+.dash-completion__meta { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+.dash-completion__meta b { font-size: var(--font-size-lg); color: var(--color-text-primary); }
+.dash-muted { color: var(--color-text-muted); }
+
+.dash-mini { display: flex; gap: var(--spacing-md); }
+.dash-mini__stat {
+  flex: 1;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.dash-mini__stat b { font-size: var(--font-size-xl); color: var(--color-text-primary); }
+.dash-mini__stat span { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.dash-recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-xs); }
+.dash-recent__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.dash-recent__item:last-child { border-bottom: none; }
+.dash-recent__icon { color: var(--color-text-muted); width: 18px; text-align: center; }
+.dash-recent__name { font-size: var(--font-size-sm); color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-recent__meta { font-size: var(--font-size-xs); color: var(--color-text-muted); white-space: nowrap; }
+.dash-empty { font-size: var(--font-size-sm); color: var(--color-text-muted); padding: var(--spacing-sm) 0; }
+
+/* ============================================================================
    LAYOUT A PAGINE — una sezione (tab) visibile per volta, centrata
    ============================================================================ */
 .container {

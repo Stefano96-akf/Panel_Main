@@ -173,6 +173,7 @@ const SupaSync = {
         DOM.renderNotes && DOM.renderNotes();
         DOM.renderTasks && DOM.renderTasks();
         DOM.renderAppointments && DOM.renderAppointments();
+        DOM.renderDashboard && DOM.renderDashboard();
       }
     } catch (e) {
       console.error('[Sync] re-render', e);

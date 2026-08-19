@@ -1144,6 +1144,77 @@ const Appointments = {
 };
 
 // ============================================================================
+// DASHBOARD MODULE - Analytics aggregate (sola lettura) da tutti i moduli
+// ============================================================================
+const Dashboard = {
+  _len(mod, method) {
+    try { return (typeof mod !== 'undefined' && mod && mod[method]) ? mod[method]().length : 0; }
+    catch (e) { return 0; }
+  },
+
+  stats() {
+    return {
+      clients: Dashboard._len(typeof Clients !== 'undefined' ? Clients : null, 'getAll'),
+      assets: Dashboard._len(typeof Assets !== 'undefined' ? Assets : null, 'getAll'),
+      notes: Dashboard._len(typeof Notes !== 'undefined' ? Notes : null, 'getAll'),
+      tasks: Dashboard._len(typeof Tasks !== 'undefined' ? Tasks : null, 'getAll'),
+      appts: Dashboard._len(typeof Appointments !== 'undefined' ? Appointments : null, 'getAll'),
+      boards: (typeof Boards !== 'undefined') ? Boards.all().length : 0,
+      groups: Dashboard._len(typeof Groups !== 'undefined' ? Groups : null, 'getAll')
+    };
+  },
+
+  taskStats() {
+    const tasks = (typeof Tasks !== 'undefined') ? Tasks.getAll() : [];
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const boards = (typeof Boards !== 'undefined') ? Boards.all() : [];
+    const perBoard = boards.map(b => ({ name: b.name, count: tasks.filter(t => t.boardId === b.id).length }))
+      .sort((a, b) => b.count - a.count);
+    return { total, done, pct: total ? Math.round(done / total * 100) : 0, perBoard };
+  },
+
+  apptStats() {
+    const all = (typeof Appointments !== 'undefined') ? Appointments.getAll() : [];
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return {
+      total: all.length,
+      upcoming: all.filter(a => a.date && a.date >= ts && !a.completed).length,
+      completed: all.filter(a => a.completed).length,
+      remote: all.filter(a => a.type === 'remote').length,
+      onsite: all.filter(a => a.type === 'onsite').length
+    };
+  },
+
+  groupStats() {
+    const clients = (typeof Clients !== 'undefined') ? Clients.getAll() : [];
+    const groups = (typeof Groups !== 'undefined') ? Groups.getAll() : [];
+    const counts = groups
+      .filter(g => !g.parentId)
+      .map(g => {
+        const subIds = (typeof Groups !== 'undefined') ? Groups.children(g.id).map(s => s.id) : [];
+        const count = clients.filter(c => c.groupId === g.id || subIds.includes(c.groupId)).length;
+        return { name: g.name, count };
+      })
+      .sort((a, b) => b.count - a.count);
+    return { top: counts.slice(0, 6), none: clients.filter(c => !c.groupId).length };
+  },
+
+  recent(n = 6) {
+    const items = [];
+    const push = (arr, type, icon, nameFn) => (arr || []).forEach(x => items.push({ type, icon, name: nameFn(x), at: x.createdAt }));
+    if (typeof Clients !== 'undefined') push(Clients.getAll(), 'Elemento', 'fa-up-right-from-square', x => x.nome);
+    if (typeof Notes !== 'undefined') push(Notes.getAll(), 'Nota', 'fa-note-sticky', x => (x.text || '').slice(0, 48));
+    if (typeof Tasks !== 'undefined') push(Tasks.getAll(), 'Attività', 'fa-list-check', x => x.text);
+    if (typeof Appointments !== 'undefined') push(Appointments.getAll(), 'Appuntamento', 'fa-calendar-days', x => x.description);
+    if (typeof Assets !== 'undefined' && Assets.getAll) push(Assets.getAll(), 'Asset', 'fa-layer-group', x => x.name);
+    return items.filter(i => i.at).sort((a, b) => (a.at < b.at ? 1 : (a.at > b.at ? -1 : 0))).slice(0, n);
+  }
+};
+window.Dashboard = Dashboard;
+
+// ============================================================================
 // TOAST MODULE - Notifications
 // ============================================================================
 const Toast = {
@@ -1720,6 +1791,98 @@ const DOM = {
         </div>
       </li>`).join('');
   },
+  // Dashboard analytics rendering
+  renderDashboard() {
+    const host = document.getElementById('dashboardBody');
+    if (!host) return;
+    const s = Dashboard.stats();
+    const ts = Dashboard.taskStats();
+    const as = Dashboard.apptStats();
+    const gs = Dashboard.groupStats();
+    const recent = Dashboard.recent(6);
+    const esc = Utils.escapeHtml;
+
+    const card = (icon, label, value, target) => `
+      <button type="button" class="dash-kpi" data-nav-target="${target}">
+        <span class="dash-kpi__icon"><i class="fa-solid ${icon}"></i></span>
+        <span class="dash-kpi__value">${value}</span>
+        <span class="dash-kpi__label">${label}</span>
+      </button>`;
+
+    const bar = (label, count, max) => {
+      const pct = max ? Math.round(count / max * 100) : 0;
+      return `<div class="dash-bar"><span class="dash-bar__label" title="${esc(label)}">${esc(label)}</span>` +
+        `<span class="dash-bar__track"><span class="dash-bar__fill" style="width:${pct}%"></span></span>` +
+        `<span class="dash-bar__val">${count}</span></div>`;
+    };
+
+    const r = 26, circ = 2 * Math.PI * r;
+    const donut = `
+      <svg class="dash-donut" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <circle cx="32" cy="32" r="${r}" class="dash-donut__bg"></circle>
+        <circle cx="32" cy="32" r="${r}" class="dash-donut__fg" transform="rotate(-90 32 32)"
+          stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${(circ * (1 - ts.pct / 100)).toFixed(1)}"></circle>
+        <text x="32" y="37" text-anchor="middle" class="dash-donut__txt">${ts.pct}%</text>
+      </svg>`;
+
+    const kpis =
+      card('fa-up-right-from-square', 'Elementi', s.clients, 'section-clients') +
+      card('fa-layer-group', 'Asset', s.assets, 'section-assets') +
+      card('fa-note-sticky', 'Note', s.notes, 'section-notes') +
+      card('fa-list-check', 'Attività', s.tasks, 'section-board') +
+      card('fa-calendar-days', 'Appuntamenti', s.appts, 'section-appointments') +
+      card('fa-table-columns', 'Bacheche', s.boards, 'section-board');
+
+    const maxBoard = Math.max(1, ...ts.perBoard.map(b => b.count));
+    const boardBars = ts.perBoard.length ? ts.perBoard.map(b => bar(b.name, b.count, maxBoard)).join('') : '<p class="dash-empty">Nessuna bacheca.</p>';
+
+    const maxG = Math.max(1, gs.none, ...gs.top.map(g => g.count));
+    const groupBars = (gs.top.length || gs.none)
+      ? gs.top.map(g => bar(g.name, g.count, maxG)).join('') + bar('Senza gruppo', gs.none, maxG)
+      : '<p class="dash-empty">Nessun gruppo.</p>';
+
+    const maxA = Math.max(1, as.remote, as.onsite);
+    const apptBars = as.total
+      ? bar('Da remoto', as.remote, maxA) + bar('Onsite', as.onsite, maxA)
+      : '<p class="dash-empty">Nessun appuntamento.</p>';
+
+    const recentHtml = recent.length ? recent.map(i => `
+      <li class="dash-recent__item">
+        <span class="dash-recent__icon"><i class="fa-solid ${i.icon}"></i></span>
+        <span class="dash-recent__name">${esc(i.name || '—')}</span>
+        <span class="dash-recent__meta">${esc(i.type)} · ${Utils.formatDate(i.at)}</span>
+      </li>`).join('') : '<li class="dash-empty">Ancora niente da mostrare.</li>';
+
+    host.innerHTML = `
+      <div class="dash-kpis">${kpis}</div>
+      <div class="dash-grid">
+        <section class="dash-card">
+          <h3 class="dash-card__title">Attività completate</h3>
+          <div class="dash-completion">${donut}<div class="dash-completion__meta"><b>${ts.done}</b> su ${ts.total}<br><span class="dash-muted">completate</span></div></div>
+          <h4 class="dash-card__sub">Attività per bacheca</h4>
+          <div class="dash-bars">${boardBars}</div>
+        </section>
+        <section class="dash-card">
+          <h3 class="dash-card__title">Calendario</h3>
+          <div class="dash-mini">
+            <div class="dash-mini__stat"><b>${as.upcoming}</b><span>In arrivo</span></div>
+            <div class="dash-mini__stat"><b>${as.completed}</b><span>Completati</span></div>
+            <div class="dash-mini__stat"><b>${as.total}</b><span>Totale</span></div>
+          </div>
+          <h4 class="dash-card__sub">Per tipo</h4>
+          <div class="dash-bars">${apptBars}</div>
+        </section>
+        <section class="dash-card">
+          <h3 class="dash-card__title">Elementi per gruppo</h3>
+          <div class="dash-bars">${groupBars}</div>
+        </section>
+        <section class="dash-card">
+          <h3 class="dash-card__title">Attività recenti</h3>
+          <ul class="dash-recent">${recentHtml}</ul>
+        </section>
+      </div>`;
+  },
+
   // Assets rendering
   renderAssets() {
     const assetsList = document.getElementById('assetsList');
@@ -1732,6 +1895,7 @@ const DOM = {
 // ============================================================================
 const UI = {
   init() {
+    UI.setupDashboardHandlers();
     UI.setupClientHandlers();
     UI.setupAssetHandlers();
     UI.setupNoteHandlers();
@@ -1741,6 +1905,20 @@ const UI = {
     UI.setupExportHandlers();
     UI.setupExpandHandler();
     UI.setupDarkModeHandler();
+  },
+
+  setupDashboardHandlers() {
+    // Click su una KPI → apre la sezione relativa (riusa il link della sidebar)
+    document.getElementById('dashboardBody')?.addEventListener('click', (e) => {
+      const kpi = e.target.closest('[data-nav-target]');
+      if (!kpi) return;
+      const link = document.querySelector('.app-sidebar__link[data-nav-target="' + kpi.dataset.navTarget + '"]');
+      if (link) link.click();
+    });
+    // Ridisegna quando si apre la Dashboard
+    document.querySelector('.app-sidebar__link[data-nav-target="section-dashboard"]')
+      ?.addEventListener('click', () => DOM.renderDashboard());
+    DOM.renderDashboard();
   },
 
   // Ridisegna la lista elementi rispettando il filtro di ricerca attivo,
