@@ -134,9 +134,10 @@
       SupaSync.userId = null;
       if (window.Workspace) Workspace.state.currentId = null;
       if (window.Profile) Profile.unmount();
-      // pulizia cache bacheche (evita che un altro account sullo stesso browser
-      // erediti le bacheche del precedente)
-      if (window.Storage) { Storage.remove(Storage.keys.boards); Storage.remove(Storage.keys.currentBoard); Storage.remove(Storage.keys.groups); }
+      // pulizia completa dei dati utente dal browser (session + local): nessun
+      // contenuto resta sul dispositivo dopo il logout (Supabase è la fonte).
+      if (window.Storage) Storage.clearData();
+      try { localStorage.removeItem('skelety_workspace_id'); } catch (e) {}
       unmountLogout();
       showGate(true);
     }

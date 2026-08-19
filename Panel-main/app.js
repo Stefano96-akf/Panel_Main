@@ -32,9 +32,28 @@ const Storage = {
     clientsView: 'panel_clients_view',
   },
 
+  // Chiavi dei DATI (contenuti utente). Quando Supabase è attivo, la fonte è il
+  // cloud: qui teniamo solo una cache di SESSIONE (sessionStorage), che sparisce
+  // a scheda chiusa e al logout — nessun dato utente resta persistito nel
+  // browser. In modalità locale (senza Supabase) restano in localStorage per
+  // non perderli a scheda chiusa. Preferenze e token di login restano sempre in
+  // localStorage.
+  dataKeys: [
+    'panel_clients', 'panel_notes', 'panel_tasks', 'panel_appointments',
+    'panel_assets', 'panel_groups', 'panel_boards', 'panel_current_board'
+  ],
+
+  _cloud() { return typeof window !== 'undefined' && !!window.sb; },
+  _backend(key) {
+    if (Storage._cloud() && Storage.dataKeys.indexOf(key) !== -1) {
+      try { if (window.sessionStorage) return window.sessionStorage; } catch (e) {}
+    }
+    return window.localStorage;
+  },
+
   get(key, defaultValue = []) {
     try {
-      const item = localStorage.getItem(key);
+      const item = Storage._backend(key).getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
       console.error(`[Storage] Error reading ${key}:`, error);
@@ -44,7 +63,7 @@ const Storage = {
 
   set(key, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      Storage._backend(key).setItem(key, JSON.stringify(value));
       return true;
     } catch (error) {
       console.error(`[Storage] Error writing ${key}:`, error);
@@ -54,7 +73,7 @@ const Storage = {
 
   remove(key) {
     try {
-      localStorage.removeItem(key);
+      Storage._backend(key).removeItem(key);
       return true;
     } catch (error) {
       console.error(`[Storage] Error removing ${key}:`, error);
@@ -70,6 +89,31 @@ const Storage = {
       console.error('[Storage] Error clearing:', error);
       return false;
     }
+  },
+
+  // Cancella TUTTI i dati utente da entrambe le memorie (usato al logout)
+  clearData() {
+    Storage.dataKeys.forEach(k => {
+      try { window.localStorage.removeItem(k); } catch (e) {}
+      try { if (window.sessionStorage) window.sessionStorage.removeItem(k); } catch (e) {}
+    });
+  },
+
+  // Migrazione una-tantum: in modalità cloud sposta gli eventuali dati rimasti
+  // in localStorage (versioni precedenti) nella cache di sessione, poi ripulisce
+  // localStorage così nessun contenuto utente resta persistito nel browser.
+  migrateToSession() {
+    if (!Storage._cloud()) return;
+    try { if (!window.sessionStorage) return; } catch (e) { return; }
+    Storage.dataKeys.forEach(k => {
+      try {
+        const ls = window.localStorage.getItem(k);
+        if (ls != null) {
+          if (window.sessionStorage.getItem(k) == null) window.sessionStorage.setItem(k, ls);
+          window.localStorage.removeItem(k);
+        }
+      } catch (e) {}
+    });
   }
 };
 
@@ -3271,6 +3315,7 @@ const AlertDialog = {
 // INITIALIZATION
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  Storage.migrateToSession(); // cloud: sposta dati legacy da localStorage a sessionStorage
   Toast.init();
   Modal.init();
   UI.init();

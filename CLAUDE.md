@@ -61,7 +61,7 @@ e inizializzato su `DOMContentLoaded`. Convenzione: ogni modulo è un `const Nom
 
 | Modulo | Responsabilità |
 |--------|----------------|
-| `Storage` | Wrapper `localStorage` con try/catch e `JSON.parse/stringify`. Le chiavi sono in `Storage.keys`. |
+| `Storage` | Wrapper storage con try/catch e `JSON.parse/stringify`. Chiavi in `Storage.keys`. Con Supabase attivo, le chiavi dati (`Storage.dataKeys`) usano **sessionStorage** (cache di sessione: Supabase è la fonte, si azzera a chiusura scheda e al logout via `clearData()`); preferenze e token restano in `localStorage`. In modalità locale (senza Supabase) i dati restano in `localStorage`. `migrateToSession()` sposta i dati legacy da localStorage a sessionStorage all'avvio. |
 | `Validators` | Validazione pura form (nome/link/note/task), ritorna `{ valid, error? }`. |
 | `Utils` | Helper: `escapeHtml`, `generateId`, `debounce`, formattazione date, CSV, download blob. |
 | `Clients` | CRUD "Elementi & Link". Chiave storage `panel_clients`. Ogni elemento può avere un `groupId` (gruppo/sotto-gruppo) e importarsi da CSV. |

@@ -96,18 +96,15 @@
       </section>
 
       <section class="block">
-        <h2>4. Cookie e archiviazione locale</h2>
-        <p>Skelety <b>non utilizza cookie</b> (né di profilazione, né pubblicitari o di tracciamento) e <b>non impiega strumenti di analytics di terze parti</b>. Per funzionare salva alcuni dati <b>esclusivamente nell'archiviazione locale (<i>localStorage</i>) del tuo browser</b>:</p>
+        <h2>4. Dove sono conservati i dati · cookie e archiviazione locale</h2>
+        <p>I tuoi <b>contenuti sono conservati sul server</b> (database Supabase), che è la fonte autorevole dei dati. Skelety <b>non utilizza cookie</b> (né di profilazione, né pubblicitari o di tracciamento) e <b>non impiega strumenti di analytics di terze parti</b>. Nel tuo browser vengono salvati soltanto dati tecnici, suddivisi così:</p>
         <table>
-          <tr><th>Dato salvato in locale</th><th>Scopo</th></tr>
-          <tr><td>Token di sessione (fornito da Supabase)</td><td>Mantenerti autenticato tra una visita e l'altra</td></tr>
-          <tr><td>Copia dei tuoi contenuti (elementi &amp; link, asset, note, attività, bacheche, appuntamenti, gruppi)</td><td>Far funzionare l'app in modo rapido e offline-first</td></tr>
-          <tr><td>Identificativo dello spazio di lavoro attivo</td><td>Ricordare il workspace selezionato</td></tr>
-          <tr><td>Preferenze di interfaccia (tema chiaro/scuro, tipo di vista, stato della barra laterale)</td><td>Ricordare le tue impostazioni di visualizzazione</td></tr>
-          <tr><td>Scelta sul banner privacy</td><td>Non mostrarti nuovamente il banner</td></tr>
+          <tr><th>Dove</th><th>Cosa</th><th>Durata</th></tr>
+          <tr><td><b>localStorage</b><br>(persistente)</td><td>Token di sessione (Supabase), identificativo dello spazio di lavoro attivo, preferenze di interfaccia (tema, vista, barra laterale), scelta sul banner</td><td>Fino al logout o alla cancellazione manuale</td></tr>
+          <tr><td><b>sessionStorage</b><br>(temporaneo)</td><td>Copia di lavoro dei tuoi contenuti, usata solo per velocità durante l'uso</td><td>Cancellata alla chiusura della scheda e al logout</td></tr>
         </table>
-        <p>Anche i <b>font e le icone sono serviti localmente</b> dal sito: navigando non vengono effettuate richieste a CDN o servizi di terze parti. La pagina di ingresso (landing) non carica alcuno strumento esterno e salva unicamente la tua scelta sul banner.</p>
-        <p>Poiché si tratta di archiviazione strettamente necessaria al servizio, non richiede il tuo consenso preventivo: il banner ha finalità informativa. Puoi cancellare questi dati in qualsiasi momento uscendo dall'account e svuotando i dati del sito dalle impostazioni del browser.</p>
+        <p>Al <b>logout</b> la copia dei contenuti viene <b>rimossa dal dispositivo</b>: nessun tuo contenuto resta persistito nel browser. Font e icone sono serviti localmente dal sito, quindi la navigazione non comporta richieste a CDN o servizi di terze parti; la pagina di ingresso non carica alcuno strumento esterno.</p>
+        <p>Poiché si tratta di archiviazione strettamente necessaria al servizio, non richiede il tuo consenso preventivo: il banner ha finalità informativa. Puoi comunque cancellare questi dati in qualsiasi momento uscendo dall'account e svuotando i dati del sito dalle impostazioni del browser.</p>
       </section>
 
       <section class="block">
