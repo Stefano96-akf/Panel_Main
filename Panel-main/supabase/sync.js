@@ -166,7 +166,7 @@ const SupaSync = {
 
   _rerender() {
     try {
-      if (typeof UI !== 'undefined' && UI.renderGroupFilter) UI.renderGroupFilter();
+      if (typeof UI !== 'undefined' && UI.renderClientFilters) UI.renderClientFilters();
       if (typeof UI !== 'undefined' && UI.refreshClients) UI.refreshClients();
       if (typeof DOM !== 'undefined') {
         DOM.renderAssets && DOM.renderAssets();

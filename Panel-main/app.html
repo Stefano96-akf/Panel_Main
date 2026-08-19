@@ -161,12 +161,18 @@
             >
           </div>
 
-          <!-- Filtro per gruppo -->
+          <!-- Filtri: gruppo + asset/tag -->
           <div class="clients-filters">
             <div class="form-group clients-filters__field">
               <label for="clientGroupFilter" class="label">Gruppo</label>
               <select id="clientGroupFilter" class="input" aria-label="Filtra per gruppo">
                 <option value="all">Tutti i gruppi</option>
+              </select>
+            </div>
+            <div class="form-group clients-filters__field">
+              <label for="clientAssetFilter" class="label">Asset / Tag</label>
+              <select id="clientAssetFilter" class="input" aria-label="Filtra per asset">
+                <option value="all">Tutti gli asset</option>
               </select>
             </div>
             <button id="manageGroupsBtn" type="button" class="btn btn--secondary btn--small clients-filters__manage">

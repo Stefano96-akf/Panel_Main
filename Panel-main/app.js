@@ -371,7 +371,7 @@ const Clients = {
     return { added, skipped };
   },
 
-  search(query, groupId = 'all') {
+  search(query, groupId = 'all', assetId = 'all') {
     const q = (query || '').toLowerCase();
     return Clients.getAll().filter(c => {
       const matchesText = !q ||
@@ -382,7 +382,11 @@ const Clients = {
         groupId === 'none' ? !c.groupId :
         (c.groupId === groupId ||
          (typeof Groups !== 'undefined' && Groups.get(c.groupId) && Groups.get(c.groupId).parentId === groupId));
-      return matchesText && matchesGroup;
+      const matchesAsset =
+        assetId === 'all' ? true :
+        assetId === 'none' ? (!Array.isArray(c.assets) || c.assets.length === 0) :
+        (Array.isArray(c.assets) && c.assets.includes(assetId));
+      return matchesText && matchesGroup && matchesAsset;
     });
   },
 
@@ -1743,9 +1747,27 @@ const UI = {
   // così add/edit/delete non azzerano la ricerca corrente.
   refreshClients() {
     const query = (DOM.clientSearch?.value || '').trim();
-    const groupSel = document.getElementById('clientGroupFilter');
-    const groupId = groupSel ? groupSel.value : 'all';
-    DOM.renderClients(Clients.search(query, groupId));
+    const groupId = document.getElementById('clientGroupFilter')?.value || 'all';
+    const assetId = document.getElementById('clientAssetFilter')?.value || 'all';
+    DOM.renderClients(Clients.search(query, groupId, assetId));
+  },
+
+  // Popola entrambi i filtri (gruppo + asset) mantenendo la selezione valida
+  renderClientFilters() {
+    UI.renderGroupFilter();
+    UI.renderAssetFilter();
+  },
+
+  // Filtro per asset/tag (gli asset fungono da etichette sugli elementi)
+  renderAssetFilter() {
+    const sel = document.getElementById('clientAssetFilter');
+    if (!sel) return;
+    const prev = sel.value || 'all';
+    const assets = (typeof Assets !== 'undefined' && Assets.getAll) ? Assets.getAll() : [];
+    let html = '<option value="all">Tutti gli asset</option><option value="none">Senza asset</option>';
+    assets.forEach(a => { html += `<option value="${a.id}">${Utils.escapeHtml(a.name)}</option>`; });
+    sel.innerHTML = html;
+    sel.value = Array.from(sel.options).some(o => o.value === prev) ? prev : 'all';
   },
 
   // Popola il <select> del filtro gruppo mantenendo la selezione valida
@@ -1799,6 +1821,7 @@ const UI = {
     searchInput?.addEventListener('input', Utils.debounce(() => UI.refreshClients(), 300));
 
     document.getElementById('clientGroupFilter')?.addEventListener('change', () => UI.refreshClients());
+    document.getElementById('clientAssetFilter')?.addEventListener('change', () => UI.refreshClients());
     document.getElementById('manageGroupsBtn')?.addEventListener('click', () => UI.handleManageGroups());
     document.getElementById('importClientsBtn')?.addEventListener('click', () => UI.handleImportCsv());
     document.getElementById('clientsViewSelect')?.addEventListener('change', (e) => UI.applyClientsView(e.target.value));
@@ -1832,7 +1855,7 @@ const UI = {
 
     // Stato iniziale: vista salvata + filtro gruppo popolato
     UI.applyClientsView(Storage.get(Storage.keys.clientsView, 'comoda'));
-    UI.renderGroupFilter();
+    UI.renderClientFilters();
     DOM.renderClients();
   },
 
@@ -2039,6 +2062,7 @@ const UI = {
       }
 
       DOM.renderAssets();
+      UI.renderAssetFilter();
       UI.refreshClients();
       Toast.success('Asset creato con successo');
       return true;
@@ -2077,6 +2101,7 @@ const UI = {
       }
 
       DOM.renderAssets();
+      UI.renderAssetFilter();
       UI.refreshClients();
       Toast.success('Asset aggiornato');
       return true;
@@ -2089,8 +2114,9 @@ const UI = {
       message: `Confermi l'eliminazione dell'asset "${asset?.name || 'selezionato'}"? L'asset verra rimosso anche da tutti gli elementi associati.`,
       onConfirm: () => {
         Assets.delete(assetId);
-        UI.refreshClients();
         DOM.renderAssets();
+        UI.renderAssetFilter();
+        UI.refreshClients();
         Toast.success('Asset eliminato');
       }
     });
