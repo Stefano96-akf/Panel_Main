@@ -2674,6 +2674,15 @@ html.dark .kanban__list.is-over {
 .pie-legend__label { flex: 1; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pie-legend__val { color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* Grafico andamento (area/linea) */
+.dash-card--wide { grid-column: 1 / -1; }
+.area { display: block; width: 100%; height: auto; }
+.area__fill { fill: var(--color-primary-light); }
+.area__line { stroke: var(--color-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.area__dot { fill: var(--color-accent); stroke: var(--color-surface); stroke-width: 1; }
+.area__lbl { fill: var(--color-text-muted); font-size: 9px; }
+.area__val { fill: var(--color-text-secondary); font-size: 9px; font-weight: 600; }
+
 /* ============================================================================
    LAYOUT A PAGINE — una sezione (tab) visibile per volta, centrata
    ============================================================================ */

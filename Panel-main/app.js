@@ -1210,6 +1210,33 @@ const Dashboard = {
     if (typeof Appointments !== 'undefined') push(Appointments.getAll(), 'Appuntamento', 'fa-calendar-days', x => x.description);
     if (typeof Assets !== 'undefined' && Assets.getAll) push(Assets.getAll(), 'Asset', 'fa-layer-group', x => x.name);
     return items.filter(i => i.at).sort((a, b) => (a.at < b.at ? 1 : (a.at > b.at ? -1 : 0))).slice(0, n);
+  },
+
+  // Contenuti creati per mese negli ultimi `months` mesi (tutte le sezioni)
+  trend(months = 6) {
+    const now = new Date();
+    const buckets = [];
+    const idx = {};
+    for (let k = months - 1; k >= 0; k--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      idx[key] = buckets.length;
+      buckets.push({ key, label: d.toLocaleDateString('it-IT', { month: 'short' }), value: 0 });
+    }
+    const bump = (iso) => {
+      if (!iso) return;
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (key in idx) buckets[idx[key]].value++;
+    };
+    const eachAt = (mod, method) => { try { if (typeof mod !== 'undefined' && mod && mod[method]) mod[method]().forEach(x => bump(x.createdAt)); } catch (e) {} };
+    eachAt(typeof Clients !== 'undefined' ? Clients : null, 'getAll');
+    eachAt(typeof Notes !== 'undefined' ? Notes : null, 'getAll');
+    eachAt(typeof Tasks !== 'undefined' ? Tasks : null, 'getAll');
+    eachAt(typeof Appointments !== 'undefined' ? Appointments : null, 'getAll');
+    eachAt(typeof Assets !== 'undefined' ? Assets : null, 'getAll');
+    return buckets;
   }
 };
 window.Dashboard = Dashboard;
@@ -1825,6 +1852,25 @@ const DOM = {
     }).join('') + `</ul>`;
   },
 
+  // Grafico area/linea da [{label,value}] (andamento nel tempo)
+  _areaChart(points) {
+    const W = 320, H = 120, padL = 8, padR = 8, padT = 12, padB = 22;
+    const innerW = W - padL - padR, innerH = H - padT - padB;
+    const max = Math.max(1, ...points.map(p => p.value));
+    const n = points.length;
+    const X = i => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const Y = v => padT + innerH - (v / max) * innerH;
+    const line = points.map((p, i) => `${X(i).toFixed(1)},${Y(p.value).toFixed(1)}`).join(' ');
+    const base = (padT + innerH).toFixed(1);
+    const area = `${X(0).toFixed(1)},${base} ${line} ${X(n - 1).toFixed(1)},${base}`;
+    const dots = points.map((p, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.value).toFixed(1)}" r="2.6" class="area__dot"></circle>`).join('');
+    const vals = points.map((p, i) => p.value ? `<text x="${X(i).toFixed(1)}" y="${(Y(p.value) - 5).toFixed(1)}" text-anchor="middle" class="area__val">${p.value}</text>` : '').join('');
+    const labels = points.map((p, i) => `<text x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="area__lbl">${Utils.escapeHtml(p.label)}</text>`).join('');
+    return `<svg class="area" viewBox="0 0 ${W} ${H}" width="100%" role="img">` +
+      `<polygon points="${area}" class="area__fill"></polygon>` +
+      `<polyline points="${line}" class="area__line" fill="none"></polyline>${dots}${vals}${labels}</svg>`;
+  },
+
   // Dashboard analytics rendering (KPI + diagrammi a torta + attività recenti)
   renderDashboard() {
     const host = document.getElementById('dashboardBody');
@@ -1890,6 +1936,10 @@ const DOM = {
     host.innerHTML = `
       <div class="dash-kpis">${kpis}</div>
       <div class="dash-grid">
+        <section class="dash-card dash-card--wide">
+          <h3 class="dash-card__title">Andamento contenuti (ultimi 6 mesi)</h3>
+          ${DOM._areaChart(Dashboard.trend(6))}
+        </section>
         ${pieCard('Attività completate', compSeg, ts.pct + '%')}
         ${pieCard('Attività per bacheca', boardSeg)}
         <section class="dash-card">
