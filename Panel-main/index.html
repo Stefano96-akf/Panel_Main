@@ -248,6 +248,35 @@
   .reveal.d2 { animation-delay: .13s; }
   .reveal.d3 { animation-delay: .2s; }
   @keyframes rise { to { opacity: 1; transform: none; } }
+
+  .footer a { text-decoration: underline; }
+
+  /* ---------- COOKIE BANNER ---------- */
+  .cookie {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    display: flex; justify-content: center;
+    padding: clamp(12px, 3vw, 20px);
+    animation: cookieUp .4s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .cookie[hidden] { display: none; }
+  @keyframes cookieUp { from { transform: translateY(120%); } to { transform: none; } }
+  .cookie__card {
+    width: min(760px, 100%);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--ink); border-radius: 16px;
+    box-shadow: 0 6px 0 0 var(--ink);
+    padding: 16px 18px;
+  }
+  .cookie__text { flex: 1 1 320px; font-size: 13.5px; color: var(--ink-soft); margin: 0; }
+  .cookie__text b { color: var(--ink); }
+  .cookie__text a { text-decoration: underline; font-weight: 600; }
+  .cookie__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cookie__btn { font-family: var(--mono); font-size: 13px; cursor: pointer; border-radius: 10px; padding: 9px 16px; border: 1px solid var(--ink); background: var(--surface); }
+  .cookie__btn--primary { background: var(--lime); box-shadow: var(--shadow); font-weight: 700; }
+  .cookie__btn--primary:hover { transform: translateY(2px); box-shadow: 0 2px 0 0 var(--ink); }
+  .cookie__btn--ghost:hover { background: var(--bg); }
+  @media (prefers-reduced-motion: reduce) { .cookie { animation: none; } }
 </style>
 
 <header class="topbar">
@@ -410,7 +439,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="6" r="2.3" fill="currentColor" stroke="none"/><circle cx="18" cy="6" r="2.3" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="2.3" fill="currentColor" stroke="none"/><path d="M6 6 L18 6 M6 6 L12 18 M18 6 L12 18" opacity=".85"/></svg>
     Skelety
   </span>
-  <span>Il tuo spazio di lavoro · sincronizzato nel cloud</span>
+  <span><a href="privacy.html">Privacy &amp; Cookie</a> · Il tuo spazio di lavoro · sincronizzato nel cloud</span>
 </footer>
 
 <script>
@@ -490,6 +519,37 @@
       else window.scrollTo({ top: 0, behavior: 'smooth' });
       if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
     });
+  });
+})();
+</script>
+
+<!-- Banner cookie / privacy -->
+<div id="cookieBanner" class="cookie" hidden>
+  <div class="cookie__card" role="dialog" aria-label="Informativa cookie e privacy">
+    <p class="cookie__text">
+      <b>Cookie &amp; privacy.</b> Skelety usa solo archiviazione tecnica necessaria all'accesso e al funzionamento
+      (nessun cookie di profilazione o tracciamento). Dettagli nell'<a href="privacy.html">Informativa Privacy &amp; Cookie</a>.
+    </p>
+    <div class="cookie__actions">
+      <button type="button" class="cookie__btn cookie__btn--ghost" data-cookie="reject">Rifiuta</button>
+      <button type="button" class="cookie__btn cookie__btn--primary" data-cookie="accept">Accetta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'skelety_cookie_consent';
+  var banner = document.getElementById('cookieBanner');
+  if (!banner) return;
+  var stored = null;
+  try { stored = localStorage.getItem(KEY); } catch (e) {}
+  if (!stored) banner.hidden = false;
+  banner.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-cookie]');
+    if (!btn) return;
+    try { localStorage.setItem(KEY, btn.getAttribute('data-cookie')); } catch (e) {}
+    banner.hidden = true;
   });
 })();
 </script>
