@@ -73,6 +73,7 @@ const Profile = {
           (w ? '<div class="profile-row"><span>Spazio</span><b>' + Profile.esc(w.name) + ' · ' + Profile.esc(role) + '</b></div>' : '') +
           '<div class="profile-row"><span>Membro dal</span><b>' + Profile.fmtDate(u.created_at) + '</b></div>' +
           '<button class="btn btn--secondary profile-logout" data-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Esci</button>' +
+          '<button class="btn btn--secondary" data-export-all><i class="fa-solid fa-download" aria-hidden="true"></i> Scarica i miei dati</button>' +
         '</section>' +
 
         '<section class="profile-block">' +
@@ -98,11 +99,69 @@ const Profile = {
           '</div>' +
         '</section>' +
 
+        '<section class="profile-block profile-block--wide profile-block--danger">' +
+          '<h3 class="profile-sec__title">Elimina account</h3>' +
+          '<p class="profile-hint">Elimina definitivamente il tuo account e tutti i tuoi dati, inclusi i contenuti e gli spazi di lavoro che possiedi. L\'azione è irreversibile.</p>' +
+          '<button class="btn btn--danger" data-delete-account><i class="fa-solid fa-trash" aria-hidden="true"></i> Elimina account</button>' +
+        '</section>' +
+
       '</div>';
+  },
+
+  // Esporta tutti i dati dell'utente (portabilità) in un file JSON
+  exportAll() {
+    const g = (k) => (typeof Storage !== 'undefined' && Storage.get) ? Storage.get(k, []) : [];
+    const dump = {
+      app: 'Skelety',
+      exportedAt: new Date().toISOString(),
+      account: { email: (Profile.user && Profile.user.email) || null },
+      clients: g('panel_clients'),
+      assets: g('panel_assets'),
+      notes: g('panel_notes'),
+      tasks: g('panel_tasks'),
+      appointments: g('panel_appointments'),
+      groups: g('panel_groups'),
+      boards: g('panel_boards')
+    };
+    try {
+      const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'skelety_dati_' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (typeof Toast !== 'undefined') Toast.success('Dati esportati');
+    } catch (e) { if (typeof Toast !== 'undefined') Toast.error('Export non riuscito'); }
+  },
+
+  // Cancellazione account self-service (irreversibile)
+  deleteAccount() {
+    const doDelete = async () => {
+      try {
+        const { error } = await SupaAuth.deleteAccount();
+        if (error) { if (typeof Toast !== 'undefined') Toast.error(error.message || 'Errore durante l\'eliminazione'); return; }
+        if (typeof Storage !== 'undefined' && Storage.clearData) Storage.clearData();
+        try { localStorage.removeItem('skelety_workspace_id'); } catch (_) {}
+        try { await SupaAuth.signOut(); } catch (_) {}
+        window.location.reload();
+      } catch (e) { if (typeof Toast !== 'undefined') Toast.error('Errore durante l\'eliminazione'); }
+    };
+    if (typeof AlertDialog !== 'undefined' && AlertDialog.confirmDelete) {
+      AlertDialog.confirmDelete({
+        title: 'Elimina account',
+        message: 'Confermi l\'eliminazione definitiva dell\'account e di tutti i tuoi dati (inclusi gli spazi di lavoro che possiedi)? L\'azione è irreversibile.',
+        onConfirm: doDelete
+      });
+    } else if (window.confirm('Eliminare definitivamente l\'account e tutti i dati?')) {
+      doDelete();
+    }
   },
 
   async onClick(e) {
     if (e.target.closest('[data-logout]')) { try { await SupaAuth.signOut(); } catch (_) {} return; }
+    if (e.target.closest('[data-export-all]')) { Profile.exportAll(); return; }
+    if (e.target.closest('[data-delete-account]')) { Profile.deleteAccount(); return; }
 
     if (e.target.closest('[data-savepw]')) {
       const host = document.getElementById('profileContent');
@@ -118,13 +177,13 @@ const Profile = {
       setMsg('Password aggiornata.', true);
       host.querySelector('#ppNew').value = '';
       host.querySelector('#ppConfirm').value = '';
-      if (window.Toast) Toast.success('Password aggiornata');
+      if (typeof Toast !== 'undefined') Toast.success('Password aggiornata');
       return;
     }
 
     if (e.target.closest('[data-copy]')) {
       const url = Profile.referUrl();
-      try { await navigator.clipboard.writeText(url); if (window.Toast) Toast.success('Link copiato'); }
+      try { await navigator.clipboard.writeText(url); if (typeof Toast !== 'undefined') Toast.success('Link copiato'); }
       catch (_) { document.getElementById('referLink')?.select(); }
       return;
     }

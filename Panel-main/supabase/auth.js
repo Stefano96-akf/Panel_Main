@@ -40,6 +40,22 @@ const SupaAuth = {
     return window.sb.auth.updateUser({ password: newPassword });
   },
 
+  // Recupero password: invia una email con link di reset. L'utente, aprendo il
+  // link, rientra con una sessione di recupero e può impostare la nuova password.
+  // (Con SMTP configurato in Supabase per un uso reale.)
+  async resetPassword(email) {
+    if (!window.sb) return { error: { message: 'Supabase non configurato' } };
+    const origin = window.location.origin;
+    const redirectTo = (origin && /^https?:/.test(origin)) ? origin + '/app.html' : undefined;
+    return window.sb.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+  },
+
+  // Cancellazione account self-service (RPC SECURITY DEFINER lato DB).
+  async deleteAccount() {
+    if (!window.sb) return { error: { message: 'Supabase non configurato' } };
+    return window.sb.rpc('delete_my_account');
+  },
+
   // Notifica ad ogni cambio di sessione (login/logout/refresh token).
   onChange(callback) {
     if (!window.sb) return { data: { subscription: { unsubscribe() {} } } };

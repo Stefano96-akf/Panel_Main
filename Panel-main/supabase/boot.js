@@ -17,13 +17,17 @@
           <label class="supa-gate__label" for="supaEmail">Email</label>
           <input id="supaEmail" class="supa-gate__input" type="email" required autocomplete="email" placeholder="tu@esempio.it">
           <label class="supa-gate__label" for="supaPassword">Password</label>
-          <input id="supaPassword" class="supa-gate__input" type="password" required autocomplete="current-password" minlength="6" placeholder="••••••••">
+          <input id="supaPassword" class="supa-gate__input" type="password" required autocomplete="current-password" minlength="8" placeholder="Almeno 8 caratteri">
+          <label class="supa-gate__consent"><input type="checkbox" id="supaConsent"> Accetto i <a href="termini.html" target="_blank" rel="noopener">Termini</a> e l'<a href="privacy.html" target="_blank" rel="noopener">Informativa Privacy</a></label>
           <div id="supaMsg" class="supa-gate__msg" role="status" aria-live="polite"></div>
           <div class="supa-gate__actions">
             <button id="supaSignIn" class="btn btn--primary" type="submit">Accedi</button>
             <button id="supaSignUp" class="btn btn--secondary" type="button">Registrati</button>
           </div>
-          <button id="supaMagic" class="supa-gate__link" type="button">Accedi con magic link (senza password)</button>
+          <div class="supa-gate__links">
+            <button id="supaForgot" class="supa-gate__link" type="button">Password dimenticata?</button>
+            <button id="supaMagic" class="supa-gate__link" type="button">Accedi con magic link</button>
+          </div>
         </form>
       </div>
     </div>
@@ -65,7 +69,8 @@
   });
 
   $('#supaSignUp').addEventListener('click', async () => {
-    if (!emailEl.value.trim() || pwEl.value.length < 6) { setMsg('Inserisci email e una password di almeno 6 caratteri.', 'error'); return; }
+    if (!emailEl.value.trim() || pwEl.value.length < 8) { setMsg('Inserisci email e una password di almeno 8 caratteri.', 'error'); return; }
+    if (!$('#supaConsent').checked) { setMsg('Per registrarti devi accettare i Termini e l\'Informativa Privacy.', 'error'); return; }
     setMsg('Creazione account…'); busy(true);
     const { data, error } = await SupaAuth.signUp(emailEl.value.trim(), pwEl.value);
     busy(false);
@@ -80,6 +85,14 @@
     const { error } = await SupaAuth.signInMagic(emailEl.value.trim());
     busy(false);
     setMsg(error ? traduci(error.message) : 'Ti abbiamo inviato un link di accesso via email.', error ? 'error' : 'ok');
+  });
+
+  $('#supaForgot').addEventListener('click', async () => {
+    if (!emailEl.value.trim()) { setMsg('Inserisci prima la tua email, poi premi "Password dimenticata?".', 'error'); return; }
+    setMsg('Invio del link di reset…'); busy(true);
+    const { error } = await SupaAuth.resetPassword(emailEl.value.trim());
+    busy(false);
+    setMsg(error ? traduci(error.message) : 'Ti abbiamo inviato un link per reimpostare la password.', error ? 'error' : 'ok');
   });
 
   function traduci(m) {
@@ -129,6 +142,12 @@
         SkeletyGate.applyPermissions();    // sezioni per permesso
         if (window.Team) await Team.render();
         if (window.Profile) Profile.mount(user);
+        // Rientro da link di reset password → guida l'utente al cambio password
+        if (/type=recovery/.test(window.location.hash || '')) {
+          if (typeof Toast !== 'undefined') Toast.show('Link di recupero attivo: imposta una nuova password qui nel Profilo.', 'info', 8000);
+          document.querySelector('[data-nav-target="section-profile"]')?.click();
+          try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+        }
       } catch (e) { console.error('[boot]', e); }
     } else {
       SupaSync.userId = null;
@@ -136,7 +155,7 @@
       if (window.Profile) Profile.unmount();
       // pulizia completa dei dati utente dal browser (session + local): nessun
       // contenuto resta sul dispositivo dopo il logout (Supabase è la fonte).
-      if (window.Storage) Storage.clearData();
+      if (typeof Storage !== 'undefined' && Storage.clearData) Storage.clearData();
       try { localStorage.removeItem('skelety_workspace_id'); } catch (e) {}
       unmountLogout();
       showGate(true);

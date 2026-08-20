@@ -85,6 +85,26 @@
 }
 .supa-gate__link:hover { text-decoration: underline; }
 
+.supa-gate__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+.supa-gate__consent input { margin-top: 3px; flex: 0 0 auto; }
+.supa-gate__consent a { color: var(--color-primary); text-decoration: underline; }
+
+.supa-gate__links {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+.supa-gate__links .supa-gate__link { margin-top: var(--spacing-sm); flex: 1 1 auto; }
+
 /* ============================================================================
    PERMESSI: gating sezioni + UI Collaboratori
    ============================================================================ */
