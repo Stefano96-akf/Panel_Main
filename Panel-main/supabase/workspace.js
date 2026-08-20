@@ -116,12 +116,21 @@ const Workspace = {
   async invite(email, role) {
     const clean = (email || '').trim().toLowerCase();
     if (!clean) return { error: 'Email mancante' };
+    const wsId = Workspace.state.currentId;
     const { error } = await window.sb.from('invitations').insert({
-      workspace_id: Workspace.state.currentId, email: clean, role: role || 'viewer'
+      workspace_id: wsId, email: clean, role: role || 'viewer'
     });
-    // se la persona è già registrata, provo ad accettare subito lato server non è possibile
-    // (lo fa lei al suo prossimo login); qui basta creare l'invito.
-    return { error: error ? (/(duplicate|unique)/i.test(error.message) ? 'Invito già presente per questa email' : error.message) : null };
+    if (error) return { error: /(duplicate|unique)/i.test(error.message) ? 'Invito già presente per questa email' : error.message };
+    // La persona entra al primo accesso con quell'email (accept_invitations()).
+    // Invio email di invito best-effort tramite Edge Function `send-invite`
+    // (richiede Brevo configurato lato server; se non lo è, l'invito resta valido).
+    let emailed = false;
+    try {
+      const { data, error: fErr } = await window.sb.functions.invoke('send-invite', { body: { workspaceId: wsId, email: clean } });
+      if (fErr) console.warn('[Workspace] send-invite', fErr.message || fErr);
+      else emailed = !!(data && data.sent === true);
+    } catch (e) { console.warn('[Workspace] send-invite', e); }
+    return { error: null, emailed };
   },
   async revokeInvite(id) {
     const { error } = await window.sb.from('invitations').update({ status: 'revoked' }).eq('id', id);
