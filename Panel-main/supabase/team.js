@@ -98,9 +98,10 @@ const Team = {
     if (inviteBtn) {
       const email = document.getElementById('inviteEmail').value;
       const role = document.getElementById('inviteRole').value;
-      const { error, emailed } = await Workspace.invite(email, role);
+      const { error, emailed, resent } = await Workspace.invite(email, role);
       if (error) { Toast && Toast.error(error); return; }
-      Toast && Toast.success(emailed ? 'Invito inviato via email' : 'Invito creato');
+      const base = resent ? 'Invito reinviato' : 'Invito creato';
+      Toast && Toast.success(emailed ? base + ' via email' : base);
       Team.render();
     } else if (revoke) {
       const { error } = await Workspace.revokeInvite(revoke.dataset.revoke);

@@ -117,10 +117,28 @@ const Workspace = {
     const clean = (email || '').trim().toLowerCase();
     if (!clean) return { error: 'Email mancante' };
     const wsId = Workspace.state.currentId;
+    const r = role || 'viewer';
+
+    // Vincolo unico (workspace_id, lower(email)): esiste al più un invito per
+    // email. Se ne esiste già uno, invece di bloccare lo "ri-inviamo":
+    // riportiamo lo stato a 'pending', aggiorniamo il ruolo e rimandiamo l'email
+    // (utile per reinviare un invito o rifarlo dopo un errore d'invio).
+    let resent = false;
     const { error } = await window.sb.from('invitations').insert({
-      workspace_id: wsId, email: clean, role: role || 'viewer'
+      workspace_id: wsId, email: clean, role: r
     });
-    if (error) return { error: /(duplicate|unique)/i.test(error.message) ? 'Invito già presente per questa email' : error.message };
+    if (error) {
+      if (/(duplicate|unique|23505)/i.test(error.message)) {
+        const { error: upErr } = await window.sb.from('invitations')
+          .update({ status: 'pending', role: r })
+          .eq('workspace_id', wsId).eq('email', clean);
+        if (upErr) return { error: upErr.message };
+        resent = true;
+      } else {
+        return { error: error.message };
+      }
+    }
+
     // La persona entra al primo accesso con quell'email (accept_invitations()).
     // Invio email di invito best-effort tramite Edge Function `send-invite`
     // (richiede Brevo configurato lato server; se non lo è, l'invito resta valido).
@@ -130,7 +148,7 @@ const Workspace = {
       if (fErr) console.warn('[Workspace] send-invite', fErr.message || fErr);
       else emailed = !!(data && data.sent === true);
     } catch (e) { console.warn('[Workspace] send-invite', e); }
-    return { error: null, emailed };
+    return { error: null, emailed, resent };
   },
   async revokeInvite(id) {
     const { error } = await window.sb.from('invitations').update({ status: 'revoked' }).eq('id', id);
