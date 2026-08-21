@@ -88,26 +88,64 @@ Deno.serve(async (req) => {
     }
 
     const subject = "Sei stato invitato su Skelety";
-    const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#191A23">
-        <h2 style="margin:0 0 8px">Ti hanno invitato su <span style="background:#B9FF66;padding:0 6px;border-radius:6px">Skelety</span></h2>
-        <p style="color:#3c3e48;line-height:1.6">
-          Sei stato invitato a collaborare nello spazio di lavoro
-          <b>${esc(wsName)}</b> come <b>${esc(roleLabel)}</b>.
-        </p>
-        <p style="color:#3c3e48;line-height:1.6">
-          Per accettare, accedi o registrati su Skelety <b>con questo indirizzo email</b>
-          (${esc(email)}): l'invito verrà applicato automaticamente al primo accesso.
-        </p>
-        <p style="margin:24px 0">
-          <a href="${esc(APP_URL)}" style="background:#191A23;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:bold">
-            Apri Skelety
-          </a>
-        </p>
-        <p style="color:#6f7280;font-size:12px;line-height:1.5">
-          Se non ti aspettavi questo invito puoi ignorare questa email.
-        </p>
-      </div>`;
+    const preheader = `Unisciti a "${wsName}" su Skelety come ${roleLabel}.`;
+
+    // Versione testuale (accessibilità + deliverability: molti provider premiano
+    // le email multipart text+html).
+    const text =
+`Ti hanno invitato a collaborare su Skelety.
+
+Sei stato invitato nello spazio di lavoro "${wsName}" come ${roleLabel}.
+
+Per accettare, accedi o registrati con questo indirizzo email (${email}): l'invito verra applicato automaticamente al primo accesso.
+
+Apri Skelety: ${APP_URL}
+
+Se non ti aspettavi questo invito puoi ignorare questa email.`;
+
+    // Email brandizzata Skelety — layout a tabella (compatibile Outlook & co.),
+    // stili inline, nessuna immagine esterna. Palette: dark #191a23, lime #b9ff66.
+    const html = `<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"></head>
+<body style="margin:0;padding:0;background:#f3f3f3;">
+  <span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${esc(preheader)}</span>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f3f3f3;">
+    <tr><td align="center" style="padding:28px 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:1px solid #e1e3db;border-radius:16px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+        <tr><td style="height:6px;line-height:6px;font-size:0;background:#b9ff66;">&nbsp;</td></tr>
+        <tr><td style="padding:32px 36px 4px;">
+          <span style="display:inline-block;font-size:22px;font-weight:800;color:#191a23;letter-spacing:-0.02em;">
+            <span style="background:#b9ff66;padding:2px 9px;border-radius:8px;">Skelety</span>
+          </span>
+        </td></tr>
+        <tr><td style="padding:22px 36px 0;">
+          <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#191a23;font-weight:700;">Ti hanno invitato a collaborare</h1>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#52545e;">
+            Sei stato invitato nello spazio di lavoro <b style="color:#191a23;">${esc(wsName)}</b> come <b style="color:#191a23;">${esc(roleLabel)}</b>.
+          </p>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#52545e;">
+            Per accettare, accedi o registrati su Skelety <b style="color:#191a23;">con questo indirizzo email</b> (${esc(email)}): l'invito verrà applicato automaticamente al primo accesso.
+          </p>
+        </td></tr>
+        <tr><td style="padding:0 36px 4px;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="border-radius:10px;background:#191a23;">
+              <a href="${esc(APP_URL)}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px;">Apri Skelety</a>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:24px 36px 0;"><hr style="border:none;border-top:1px solid #e1e3db;margin:0;"></td></tr>
+        <tr><td style="padding:14px 36px 30px;">
+          <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8d96;">Se non ti aspettavi questo invito puoi ignorare questa email.</p>
+        </td></tr>
+        <tr><td style="padding:16px 36px;background:#f3f3f3;border-top:1px solid #e1e3db;">
+          <p style="margin:0;font-size:12px;color:#8a8d96;">Skelety · <a href="https://skelety.app" style="color:#52545e;text-decoration:none;">skelety.app</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 
     const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
@@ -122,6 +160,7 @@ Deno.serve(async (req) => {
         ...(REPLY_TO ? { replyTo: { email: REPLY_TO } } : {}),
         subject,
         htmlContent: html,
+        textContent: text,
       }),
     });
 
