@@ -123,7 +123,11 @@
           if (link) link.classList.toggle('perm-hidden', hidden);
         });
       });
+      // La pagina Collaboratori è sempre accessibile a chi è loggato: mostra sia
+      // il link in sidebar sia la sezione. I controlli riservati (invito/permessi)
+      // sono gestiti da Team.render() in base al ruolo (owner/admin).
       document.querySelector('[data-nav-target="section-team"]')?.classList.remove('perm-hidden');
+      document.getElementById('section-team')?.classList.remove('perm-hidden');
     }
   };
   window.SkeletyGate = SkeletyGate;
@@ -136,19 +140,22 @@
     if (user) {
       showGate(false);
       mountLogout(user);
+      // Ogni passo è isolato: un errore in bootstrap/sync non deve impedire
+      // l'applicazione dei permessi né il render della sezione Collaboratori
+      // (bug: senza questo, un intoppo nella sync nascondeva i controlli admin).
+      try { await Workspace.bootstrap(user); } catch (e) { console.error('[boot] bootstrap', e); }
+      try { await SupaSync.initialSync(user); } catch (e) { console.error('[boot] initialSync', e); }
+      try { SkeletyGate.applyPermissions(); } catch (e) { console.error('[boot] applyPermissions', e); }
+      try { if (window.Team) await Team.render(); } catch (e) { console.error('[boot] Team.render', e); }
+      try { if (window.Profile) Profile.mount(user); } catch (e) { console.error('[boot] Profile.mount', e); }
+      // Rientro da link di reset password → guida l'utente al cambio password
       try {
-        await Workspace.bootstrap(user);   // workspace + inviti accettati
-        await SupaSync.initialSync(user);  // dati del workspace corrente
-        SkeletyGate.applyPermissions();    // sezioni per permesso
-        if (window.Team) await Team.render();
-        if (window.Profile) Profile.mount(user);
-        // Rientro da link di reset password → guida l'utente al cambio password
         if (/type=recovery/.test(window.location.hash || '')) {
           if (typeof Toast !== 'undefined') Toast.show('Link di recupero attivo: imposta una nuova password qui nel Profilo.', 'info', 8000);
           document.querySelector('[data-nav-target="section-profile"]')?.click();
           try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
         }
-      } catch (e) { console.error('[boot]', e); }
+      } catch (e) { console.error('[boot] recovery', e); }
     } else {
       SupaSync.userId = null;
       if (window.Workspace) Workspace.state.currentId = null;
