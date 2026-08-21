@@ -11,6 +11,7 @@
 //   BREVO_API_KEY   chiave API di Brevo (v3)
 //   SENDER_EMAIL    mittente verificato in Brevo (es. no-reply@tuodominio)
 //   SENDER_NAME     (opzionale) nome mittente, default "Skelety"
+//   REPLY_TO        (opzionale) indirizzo per le risposte (es. la casella Kalbid)
 //   APP_URL         (opzionale) URL dell'app, default https://skelety.app/app.html
 // SUPABASE_URL e SUPABASE_ANON_KEY sono iniettati automaticamente da Supabase.
 // ============================================================================
@@ -68,8 +69,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (invErr || !inv) return json({ sent: false, reason: "not_authorized_or_not_found" }, 403);
 
-    const { data: me } = await supabase.auth.getUser();
-    const inviter = me?.user?.email || "un collaboratore";
+    // Nota: non esponiamo l'email di chi invita nel corpo del messaggio
+    // (l'invito è "dallo spazio di lavoro", non dall'indirizzo personale).
     // deno-lint-ignore no-explicit-any
     const wsName = (inv as any).workspaces?.name || "uno spazio di lavoro";
     const roleLabel = ROLE_LABELS[(inv as any).role] || (inv as any).role || "collaboratore";
@@ -77,6 +78,9 @@ Deno.serve(async (req) => {
     const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
     const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL");
     const SENDER_NAME = Deno.env.get("SENDER_NAME") || "Skelety";
+    // Indirizzo a cui vanno le eventuali risposte (opzionale): utile se il
+    // mittente è un no-reply ma vuoi ricevere le risposte su una casella reale.
+    const REPLY_TO = (Deno.env.get("REPLY_TO") || "").trim();
     const APP_URL = Deno.env.get("APP_URL") || "https://skelety.app/app.html";
     if (!BREVO_API_KEY || !SENDER_EMAIL) {
       // Config mancante: l'invito esiste comunque (accettato al primo login).
@@ -88,7 +92,7 @@ Deno.serve(async (req) => {
       <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#191A23">
         <h2 style="margin:0 0 8px">Ti hanno invitato su <span style="background:#B9FF66;padding:0 6px;border-radius:6px">Skelety</span></h2>
         <p style="color:#3c3e48;line-height:1.6">
-          <b>${esc(inviter)}</b> ti ha invitato a collaborare nello spazio di lavoro
+          Sei stato invitato a collaborare nello spazio di lavoro
           <b>${esc(wsName)}</b> come <b>${esc(roleLabel)}</b>.
         </p>
         <p style="color:#3c3e48;line-height:1.6">
@@ -115,6 +119,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         sender: { email: SENDER_EMAIL, name: SENDER_NAME },
         to: [{ email }],
+        ...(REPLY_TO ? { replyTo: { email: REPLY_TO } } : {}),
         subject,
         htmlContent: html,
       }),
