@@ -5,6 +5,14 @@
 (function () {
   if (!window.sb) return; // nessuna config → app in modalità locale, nessun gate
 
+  // Link d'invito: se si arriva con ?join=<token>, lo memorizzo subito così
+  // sopravvive all'eventuale redirect di login (es. magic link) e lo applico
+  // dopo l'accesso (vedi maybeJoinFromLink).
+  try {
+    const jt = new URL(window.location.href).searchParams.get('join');
+    if (jt) localStorage.setItem('skelety_join_token', jt);
+  } catch (e) {}
+
   const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 
   // ---- Overlay di login ----
@@ -132,6 +140,38 @@
   };
   window.SkeletyGate = SkeletyGate;
 
+  // Applica un eventuale link d'invito (?join=<token>, o stashato in localStorage
+  // prima del login): aggiunge l'utente al workspace condiviso e lo rende attivo.
+  async function maybeJoinFromLink() {
+    if (!window.Workspace || !Workspace.joinByToken) return;
+    let token = null;
+    try { token = new URL(window.location.href).searchParams.get('join'); } catch (e) {}
+    if (!token) { try { token = localStorage.getItem('skelety_join_token'); } catch (e) {} }
+    if (!token) return;
+    try {
+      const { workspaceId, error } = await Workspace.joinByToken(token);
+      if (error) {
+        console.warn('[boot] join', error);
+      } else if (workspaceId) {
+        await Workspace.loadList();
+        Workspace.setCurrent(workspaceId);
+        if (typeof Toast !== 'undefined') Toast.success('Sei entrato nello spazio di lavoro');
+      } else if (typeof Toast !== 'undefined') {
+        Toast.warning('Link d\'invito non valido o non più attivo');
+      }
+    } finally {
+      try { localStorage.removeItem('skelety_join_token'); } catch (e) {}
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.has('join')) {
+          u.searchParams.delete('join');
+          const qs = u.searchParams.toString();
+          history.replaceState(null, '', u.pathname + (qs ? '?' + qs : '') + u.hash);
+        }
+      } catch (e) {}
+    }
+  }
+
   // ---- Stato di autenticazione ----
   SupaSync.install();          // aggancia Storage.set
   if (window.Team) Team.init(); // bind UI Collaboratori (una volta)
@@ -144,6 +184,7 @@
       // l'applicazione dei permessi né il render della sezione Collaboratori
       // (bug: senza questo, un intoppo nella sync nascondeva i controlli admin).
       try { await Workspace.bootstrap(user); } catch (e) { console.error('[boot] bootstrap', e); }
+      try { await maybeJoinFromLink(); } catch (e) { console.error('[boot] join', e); }
       try { await SupaSync.initialSync(user); } catch (e) { console.error('[boot] initialSync', e); }
       try { SkeletyGate.applyPermissions(); } catch (e) { console.error('[boot] applyPermissions', e); }
       try { if (window.Team) await Team.render(); } catch (e) { console.error('[boot] Team.render', e); }

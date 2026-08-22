@@ -172,6 +172,43 @@ const Workspace = {
     const { error } = await window.sb.from('workspace_members')
       .delete().eq('workspace_id', Workspace.state.currentId).eq('user_id', userId);
     return { error: error ? error.message : null };
+  },
+
+  // ---- Link d'invito condivisibile (chi apre il link entra con l'account che vuole) ----
+  // La tabella workspace_join_links ha RLS admin-only: solo un admin legge/gestisce
+  // il token. L'ingresso avviene via RPC SECURITY DEFINER join_workspace_by_token.
+  async joinLinkGet() {
+    const { data, error } = await window.sb.from('workspace_join_links')
+      .select('token, role').eq('workspace_id', Workspace.state.currentId).maybeSingle();
+    if (error) { console.error('[Workspace] joinLinkGet', error.message); return null; }
+    return data; // { token, role } oppure null
+  },
+  // regenerate=true → nuovo token (revoca il vecchio link); altrimenti crea/aggiorna il ruolo
+  async joinLinkSet(role, regenerate) {
+    const ws = Workspace.state.currentId;
+    if (regenerate) {
+      await window.sb.from('workspace_join_links').delete().eq('workspace_id', ws);
+    }
+    const { data, error } = await window.sb.from('workspace_join_links')
+      .upsert({ workspace_id: ws, role: role || 'viewer' }, { onConflict: 'workspace_id' })
+      .select('token, role').maybeSingle();
+    if (error) return { error: error.message };
+    return { data };
+  },
+  async joinLinkOff() {
+    const { error } = await window.sb.from('workspace_join_links')
+      .delete().eq('workspace_id', Workspace.state.currentId);
+    return { error: error ? error.message : null };
+  },
+  joinLinkUrl(token) {
+    let origin = 'https://skelety.app';
+    try { origin = window.location.origin; } catch (e) {}
+    return origin + '/app.html?join=' + encodeURIComponent(token);
+  },
+  async joinByToken(token) {
+    const { data, error } = await window.sb.rpc('join_workspace_by_token', { p_token: token });
+    if (error) return { error: error.message };
+    return { workspaceId: data || null };
   }
 };
 

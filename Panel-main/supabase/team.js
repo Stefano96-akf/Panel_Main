@@ -22,7 +22,11 @@ const Team = {
     if (!Team.el || !window.Workspace || !Workspace.current()) return;
     const admin = Workspace.isAdmin();
     const me = Workspace.state.user;
-    const [members, invites] = await Promise.all([Workspace.members(), admin ? Workspace.invites() : []]);
+    const [members, invites, joinLink] = await Promise.all([
+      Workspace.members(),
+      admin ? Workspace.invites() : [],
+      admin ? Workspace.joinLinkGet() : null
+    ]);
 
     const roleOpts = (sel) => Team.ASSIGNABLE
       .map(r => `<option value="${r}" ${r === sel ? 'selected' : ''}>${Team.ROLE_LABELS[r]}</option>`).join('');
@@ -48,6 +52,22 @@ const Team = {
         ${invites.length ? `<ul class="team__invites">${invites.map(i => `
           <li><span>${Team.esc(i.email)} · <em>${Team.ROLE_LABELS[i.role] || i.role}</em> · in attesa</span>
           <button class="team__link" data-revoke="${i.id}">Revoca</button></li>`).join('')}</ul>` : ''}
+      </div>` : '';
+
+    const joinLinkBox = admin ? `
+      <div class="team__card">
+        <h3 class="team__h">Link d'invito</h3>
+        <p class="team__hint">Chiunque apra il link entra in questo spazio con l'account che preferisce (qualsiasi email), con il ruolo scelto.</p>
+        <div class="team__invite">
+          <select id="joinLinkRole" class="input" aria-label="Ruolo del link" data-joinlink-role>${roleOpts(joinLink ? joinLink.role : 'viewer')}</select>
+          <button class="btn btn--primary" data-joinlink-gen>${joinLink ? 'Rigenera link' : 'Genera link'}</button>
+          ${joinLink ? '<button class="btn btn--secondary" data-joinlink-off>Disattiva</button>' : ''}
+        </div>
+        ${joinLink ? `<div class="team__joinlink">
+          <input type="text" readonly class="input team__joinlink-url" id="joinLinkUrl" value="${Team.esc(Workspace.joinLinkUrl(joinLink.token))}" aria-label="Link d'invito" data-joinlink-url>
+          <button class="btn btn--secondary btn--small" data-joinlink-copy>Copia</button>
+        </div>
+        <p class="team__hint">Rigenerando il link, quello precedente smette di funzionare.</p>` : ''}
       </div>` : '';
 
     const rows = members.map(m => {
@@ -85,6 +105,7 @@ const Team = {
     Team.el.innerHTML = `
       ${switcher}
       ${inviteBox}
+      ${joinLinkBox}
       <div class="team__card">
         <h3 class="team__h">Membri (${members.length})</h3>
         <ul class="team__members">${rows}</ul>
@@ -95,6 +116,36 @@ const Team = {
     const inviteBtn = e.target.closest('[data-invite]');
     const revoke = e.target.closest('[data-revoke]');
     const remove = e.target.closest('[data-remove]');
+    const jlGen = e.target.closest('[data-joinlink-gen]');
+    const jlOff = e.target.closest('[data-joinlink-off]');
+    const jlCopy = e.target.closest('[data-joinlink-copy]');
+    if (jlGen) {
+      const roleSel = document.getElementById('joinLinkRole');
+      const role = roleSel ? roleSel.value : 'viewer';
+      const existing = !!document.getElementById('joinLinkUrl'); // link già attivo → rigenera
+      const { error } = await Workspace.joinLinkSet(role, existing);
+      if (error) { Toast && Toast.error(error); return; }
+      Toast && Toast.success(existing ? 'Link rigenerato' : 'Link creato');
+      Team.render();
+      return;
+    }
+    if (jlOff) {
+      const { error } = await Workspace.joinLinkOff();
+      if (error) { Toast && Toast.error(error); return; }
+      Toast && Toast.success('Link disattivato'); Team.render();
+      return;
+    }
+    if (jlCopy) {
+      const inp = document.getElementById('joinLinkUrl');
+      if (!inp) return;
+      const val = inp.value;
+      const done = () => { Toast && Toast.success('Link copiato'); };
+      const fallback = () => { try { inp.focus(); inp.select(); document.execCommand('copy'); done(); } catch (err) {} };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val).then(done).catch(fallback);
+      } else { fallback(); }
+      return;
+    }
     if (inviteBtn) {
       const email = document.getElementById('inviteEmail').value;
       const role = document.getElementById('inviteRole').value;
@@ -122,6 +173,17 @@ const Team = {
     const sw = e.target.closest('[data-ws-switch]');
     const role = e.target.closest('[data-role]');
     const ov = e.target.closest('[data-override]');
+    const jlRole = e.target.closest('[data-joinlink-role]');
+    if (jlRole) {
+      // Se il link esiste già, aggiorna il suo ruolo mantenendo il token.
+      // Altrimenti la scelta verrà usata al click su "Genera link".
+      if (document.getElementById('joinLinkUrl')) {
+        const { error } = await Workspace.joinLinkSet(jlRole.value, false);
+        if (error) { Toast && Toast.error(error); return; }
+        Toast && Toast.success('Ruolo del link aggiornato'); Team.render();
+      }
+      return;
+    }
     if (sw) {
       if (Workspace.setCurrent(sw.value)) {
         await SupaSync.switchWorkspace();
