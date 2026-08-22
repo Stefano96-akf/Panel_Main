@@ -29,7 +29,6 @@ const Storage = {
     darkMode: 'panel_dark_mode',
     layoutExpanded: 'panel_layout_expanded',
     sidebarCollapsed: 'panlink_sidebar_collapsed',
-    clientsView: 'panel_clients_view',
   },
 
   // Chiavi dei DATI (contenuti utente). Quando Supabase è attivo, la fonte è il
@@ -1514,10 +1513,10 @@ const DOM = {
   tasksList: document.getElementById('tasksList'),
   clientSearch: document.getElementById('clientSearch'),
 
-  // Clients rendering
+  // Clients rendering — tabella (Nome | Link | Gruppo | Asset/Tag | Azioni)
   renderClients(clients = null) {
     const list = clients || Clients.getAll();
-    DOM.clientsList.innerHTML = '';
+    if (!DOM.clientsList) return;
 
     if (list.length === 0) {
       DOM.clientsList.innerHTML = `
@@ -1531,61 +1530,55 @@ const DOM = {
       return;
     }
 
-    list.forEach(client => {
-      const item = DOM.createClientElement(client);
-      DOM.clientsList.appendChild(item);
-    });
+    const rows = list.map(c => DOM.clientRowHtml(c)).join('');
+    DOM.clientsList.innerHTML = `
+      <table class="data-table data-table--clients">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Link</th>
+            <th>Gruppo</th>
+            <th>Asset / Tag</th>
+            <th class="data-table__actions-col">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
   },
-  createClientElement(client) {
-    const div = document.createElement('div');
-    div.className = 'client-item';
-    const assetBadgesHtml = client.assets && client.assets.length > 0 ? `
-      <div class="asset-badges">
-        ${Assets.getByIds(client.assets).map(asset => `<span class="asset-badge">${Utils.escapeHtml(asset.name)}</span>`).join('')}
-      </div>
-    ` : '';
+  clientRowHtml(client) {
     const safeLink = Utils.safeUrl(client.link);
-    const nameCell = safeLink
-      ? `<a href="${Utils.escapeHtml(safeLink)}"
-             target="_blank"
-             rel="noopener noreferrer"
-             class="client-item__name">
-          ${Utils.escapeHtml(client.nome)}
-        </a>`
-      : `<span class="client-item__name client-item__name--unsafe"
-             title="Link non valido o non sicuro">
-          ${Utils.escapeHtml(client.nome)}
-        </span>`;
+    const nameHtml = Utils.escapeHtml(client.nome || '');
+    const linkCell = safeLink
+      ? `<a href="${Utils.escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" class="data-table__link">${Utils.escapeHtml(client.link)}</a>`
+      : (client.link
+          ? `<span class="data-table__link data-table__link--unsafe" title="Link non valido o non sicuro">${Utils.escapeHtml(client.link)}</span>`
+          : '<span class="data-table__muted">—</span>');
     const groupLabel = (typeof Groups !== 'undefined' && client.groupId) ? Groups.labelFor(client.groupId) : '';
-    const groupBadgeHtml = groupLabel
+    const groupCell = groupLabel
       ? `<span class="client-item__group"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${Utils.escapeHtml(groupLabel)}</span>`
-      : '';
-    div.innerHTML = `
-      <div class="client-item__info">
-        ${nameCell}
-        <div class="client-item__meta">
-          <span class="client-item__date">${Utils.formatDate(client.createdAt)}</span>
-          ${groupBadgeHtml}
-        </div>
-        ${assetBadgesHtml}
-      </div>
-      <div class="client-item__actions">
-        <button class="client-item__action-btn" title="Apri link"
-                data-open-client="${client.id}" ${safeLink ? '' : 'disabled'}>
-          <i class="fa-solid fa-up-right-from-square"></i>
-        </button>
-        <button class="client-item__action-btn" title="Modifica"
-                data-edit-client="${client.id}">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button class="client-item__action-btn client-item__action-btn--delete" title="Elimina"
-                data-delete-client="${client.id}">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-    `;
-
-    return div;
+      : '<span class="data-table__muted">—</span>';
+    const assets = (client.assets && client.assets.length) ? Assets.getByIds(client.assets) : [];
+    const assetCell = assets.length
+      ? `<div class="asset-badges">${assets.map(a => `<span class="asset-badge">${Utils.escapeHtml(a.name)}</span>`).join('')}</div>`
+      : '<span class="data-table__muted">—</span>';
+    return `
+      <tr>
+        <td data-label="Nome" class="data-table__name">${nameHtml}</td>
+        <td data-label="Link">${linkCell}</td>
+        <td data-label="Gruppo">${groupCell}</td>
+        <td data-label="Asset / Tag">${assetCell}</td>
+        <td data-label="Azioni" class="data-table__actions">
+          <button class="client-item__action-btn" title="Apri link" data-open-client="${client.id}" ${safeLink ? '' : 'disabled'}>
+            <i class="fa-solid fa-up-right-from-square"></i>
+          </button>
+          <button class="client-item__action-btn" title="Modifica" data-edit-client="${client.id}">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="client-item__action-btn client-item__action-btn--delete" title="Elimina" data-delete-client="${client.id}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
   },
 
   // Notes rendering
@@ -2098,20 +2091,6 @@ const UI = {
     return html;
   },
 
-  // Applica e persiste la vista degli Elementi (comoda | compatta | affiancata)
-  applyClientsView(mode) {
-    const valid = ['comoda', 'compatta', 'affiancata'];
-    const m = valid.includes(mode) ? mode : 'comoda';
-    const section = document.getElementById('section-clients');
-    if (section) {
-      valid.forEach(v => section.classList.remove('clients-view--' + v));
-      section.classList.add('clients-view--' + m);
-    }
-    const sel = document.getElementById('clientsViewSelect');
-    if (sel && sel.value !== m) sel.value = m;
-    Storage.set(Storage.keys.clientsView, m);
-  },
-
   setupClientHandlers() {
     const addBtn = document.getElementById('addClientBtn');
     const searchInput = DOM.clientSearch;
@@ -2123,7 +2102,6 @@ const UI = {
     document.getElementById('clientAssetFilter')?.addEventListener('change', () => UI.refreshClients());
     document.getElementById('manageGroupsBtn')?.addEventListener('click', () => UI.handleManageGroups());
     document.getElementById('importClientsBtn')?.addEventListener('click', () => UI.handleImportCsv());
-    document.getElementById('clientsViewSelect')?.addEventListener('change', (e) => UI.applyClientsView(e.target.value));
 
     // Event delegation for client actions
     DOM.clientsList.addEventListener('click', (e) => {
@@ -2152,8 +2130,7 @@ const UI = {
       }
     });
 
-    // Stato iniziale: vista salvata + filtro gruppo popolato
-    UI.applyClientsView(Storage.get(Storage.keys.clientsView, 'comoda'));
+    // Stato iniziale: filtro gruppo popolato + tabella
     UI.renderClientFilters();
     DOM.renderClients();
   },

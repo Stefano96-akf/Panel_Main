@@ -141,95 +141,69 @@
       <div class="panel__header">
         <h2 id="dashboard-title" class="panel__title">Dashboard</h2>
       </div>
+      <hr class="panel__divider">
       <div id="dashboardBody" class="dashboard"></div>
     </section>
 
-    <section id="section-clients" class="page panel clients-view clients-view--comoda" aria-labelledby="clients-title">
-      <div class="panel__header panel__header--clients">
+    <section id="section-clients" class="page panel" aria-labelledby="clients-title">
+      <div class="panel__header">
         <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
-        <div class="clients-personalize">
-          <label for="clientsViewSelect" class="clients-personalize__label">
-            <i class="fa-solid fa-table-columns" aria-hidden="true"></i> Personalizza
-          </label>
-          <select id="clientsViewSelect" class="input clients-personalize__select" aria-label="Personalizza vista">
-            <option value="comoda">Comoda</option>
-            <option value="compatta">Compatta</option>
-            <option value="affiancata">Affiancata</option>
-          </select>
+      </div>
+
+      <!-- Barra strumenti: ricerca, filtri, aggiunta, import/export -->
+      <div class="section-toolbar">
+        <div class="section-toolbar__row">
+          <div class="form-group section-toolbar__search">
+            <label for="clientSearch" class="label">Cerca</label>
+            <input type="text" id="clientSearch" class="input" placeholder="Nome o link..." aria-label="Cerca">
+          </div>
+          <div class="form-group clients-filters__field">
+            <label for="clientGroupFilter" class="label">Gruppo</label>
+            <select id="clientGroupFilter" class="input" aria-label="Filtra per gruppo">
+              <option value="all">Tutti i gruppi</option>
+            </select>
+          </div>
+          <div class="form-group clients-filters__field">
+            <label for="clientAssetFilter" class="label">Asset / Tag</label>
+            <select id="clientAssetFilter" class="input" aria-label="Filtra per asset">
+              <option value="all">Tutti gli asset</option>
+            </select>
+          </div>
+          <button id="manageGroupsBtn" type="button" class="btn btn--secondary btn--small clients-filters__manage">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Gestisci gruppi
+          </button>
+        </div>
+
+        <!-- Aggiungi elemento (inline) -->
+        <div class="section-toolbar__row section-toolbar__row--add">
+          <div class="form-group">
+            <label for="clientName" class="label">Attributo</label>
+            <input type="text" id="clientName" class="input" placeholder="Es. Sito Web">
+          </div>
+          <div class="form-group">
+            <label for="clientLink" class="label">Link</label>
+            <input type="url" id="clientLink" class="input" placeholder="https://www.esempio.com">
+          </div>
+          <button id="addClientBtn" class="btn btn--primary">
+            <i class="fa-solid fa-plus"></i> Aggiungi Elemento
+          </button>
+          <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
+            <i class="fa-solid fa-layer-group"></i> Crea Asset
+          </button>
+          <button id="importClientsBtn" class="btn btn--secondary btn--small">
+            <i class="fa-solid fa-inbox"></i> Importa CSV
+          </button>
+          <button id="exportClientsBtn" class="btn btn--secondary btn--small">
+            <i class="fa-solid fa-download"></i> Esporta CSV
+          </button>
         </div>
       </div>
 
-      <div class="clients-layout">
-        <div class="clients-layout__controls">
-          <!-- Search Box -->
-          <div class="form-group">
-            <label for="clientSearch" class="label">Cerca..</label>
-            <input
-              type="text"
-              id="clientSearch"
-              class="input"
-              placeholder="Digita nome o link..."
-              aria-label="Cerca..."
-            >
-          </div>
+      <hr class="panel__divider">
 
-          <!-- Filtri: gruppo + asset/tag -->
-          <div class="clients-filters">
-            <div class="form-group clients-filters__field">
-              <label for="clientGroupFilter" class="label">Gruppo</label>
-              <select id="clientGroupFilter" class="input" aria-label="Filtra per gruppo">
-                <option value="all">Tutti i gruppi</option>
-              </select>
-            </div>
-            <div class="form-group clients-filters__field">
-              <label for="clientAssetFilter" class="label">Asset / Tag</label>
-              <select id="clientAssetFilter" class="input" aria-label="Filtra per asset">
-                <option value="all">Tutti gli asset</option>
-              </select>
-            </div>
-            <button id="manageGroupsBtn" type="button" class="btn btn--secondary btn--small clients-filters__manage">
-              <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Gestisci gruppi
-            </button>
-          </div>
-
-          <!-- Add Client Form -->
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="clientName" class="label">Attributo</label>
-              <input type="text" id="clientName" class="input" placeholder="Es. Sito Web">
-            </div>
-            <div class="form-group">
-              <label for="clientLink" class="label">Link:</label>
-              <input type="url" id="clientLink" class="input" placeholder="https://www.esempio.com">
-            </div>
-          </div>
-
-          <div class="button-group">
-            <button id="addClientBtn" class="btn btn--primary">
-              <i class="fa-solid fa-plus"></i> Aggiungi Elemento
-            </button>
-            <button id="createAssetBtnMain" data-create-asset-btn class="btn btn--secondary">
-              <i class="fa-solid fa-layer-group"></i> Crea Asset
-            </button>
-          </div>
-        </div>
-
-        <div class="clients-layout__list">
-          <!-- Clients List -->
-          <div id="clientsList" class="clients-list" aria-live="polite" aria-label="Elenco elementi">
-            <!-- Clients rendered here -->
-          </div>
-
-          <!-- Import / Export -->
-          <div class="action-row">
-            <button id="importClientsBtn" class="btn btn--secondary btn--small">
-              <i class="fa-solid fa-inbox"></i> Importa CSV
-            </button>
-            <button id="exportClientsBtn" class="btn btn--secondary btn--small">
-              <i class="fa-solid fa-download"></i> Esporta CSV
-            </button>
-          </div>
-        </div>
+      <!-- Tabella elementi -->
+      <div id="clientsList" class="clients-table-wrap" aria-live="polite" aria-label="Elenco elementi">
+        <!-- Tabella resa da JS -->
       </div>
     </section>
 
@@ -240,6 +214,8 @@
       <button id="createAssetBtnSide" data-create-asset-btn class="btn btn--primary btn--block" style="margin-bottom: var(--spacing-lg);">
         <i class="fa-solid fa-layer-group"></i> Crea Asset
       </button>
+
+      <hr class="panel__divider">
 
       <div id="assetsList" class="assets-list" aria-live="polite" aria-label="Elenco asset">
         <!-- Assets rendered here -->
@@ -262,6 +238,8 @@
       <button id="addNoteBtn" class="btn btn--primary btn--small">
         <i class="fa-solid fa-note-sticky"></i> Aggiungi Nota
       </button>
+
+      <hr class="panel__divider">
 
       <ul id="notesList" class="notes-list" aria-live="polite" role="list">
         <!-- Notes rendered here -->
@@ -293,6 +271,8 @@
           </button>
         </div>
       </div>
+
+      <hr class="panel__divider">
 
       <ul id="tasksList" class="tasks-list" aria-live="polite" role="list">
         <!-- Tasks rendered here -->
@@ -335,6 +315,8 @@
         </div>
       </div>
 
+      <hr class="panel__divider">
+
       <!-- Vista calendario (griglia mensile) -->
       <div id="calendarBody" class="cal" aria-label="Calendario appuntamenti"></div>
 
@@ -374,6 +356,8 @@
         </div>
       </div>
 
+      <hr class="panel__divider">
+
       <!-- Colonne della bacheca attiva — rese dinamicamente da JS -->
       <div id="kanbanBoard" class="kanban" aria-label="Bacheca attività"></div>
     </section>
@@ -381,12 +365,14 @@
     <!-- Pagina: Collaboratori (visibile solo ai membri di un workspace) -->
     <section id="section-team" class="page panel perm-hidden" aria-labelledby="team-title">
       <h2 id="team-title" class="panel__title">Collaboratori</h2>
+      <hr class="panel__divider">
       <div id="teamContent" class="team"></div>
     </section>
 
     <!-- Pagina: Profilo (visibile solo dopo il login) -->
     <section id="section-profile" class="page panel" aria-labelledby="profile-title">
       <h2 id="profile-title" class="panel__title">Profilo</h2>
+      <hr class="panel__divider">
       <div id="profileContent" class="profile"></div>
     </section>
   </main>

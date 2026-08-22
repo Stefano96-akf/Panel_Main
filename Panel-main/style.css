@@ -2354,28 +2354,46 @@ html.dark .kanban__list.is-over {
 }
 .client-item__group i { font-size: 0.8em; opacity: 0.8; }
 
-/* --- Vista "Affiancata": controlli a sinistra, lista a destra --- */
-.clients-view--affiancata .clients-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
-  gap: var(--spacing-xl);
-  align-items: start;
+/* ---------- DIVIDER DI SEZIONE + BARRA STRUMENTI ---------- */
+/* Separa la barra strumenti (filtri/ricerca/azioni) dal contenuto centrale,
+   dando respiro sotto l'intestazione. Usato in tutte le pagine. */
+.panel__divider {
+  border: 0;
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--spacing-lg) 0;
 }
-.clients-view--affiancata .clients-layout__controls {
-  position: sticky;
-  top: var(--spacing-md);
-}
-@media (max-width: 900px) {
-  .clients-view--affiancata .clients-layout { grid-template-columns: 1fr; }
-  .clients-view--affiancata .clients-layout__controls { position: static; }
-}
+.section-toolbar { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.section-toolbar__row { display: flex; gap: var(--spacing-md); align-items: flex-end; flex-wrap: wrap; }
+.section-toolbar__row .form-group { margin-bottom: 0; }
+.section-toolbar__search { flex: 1 1 240px; }
+.section-toolbar__row--add .form-group { flex: 1 1 200px; }
 
-/* --- Vista "Compatta": righe dense --- */
-.clients-view--compatta .client-item { padding: var(--spacing-sm) var(--spacing-md); }
-.clients-view--compatta .client-item:hover { transform: none; }
-.clients-view--compatta .client-item__meta,
-.clients-view--compatta .asset-badges { display: none; }
-.clients-view--compatta .clients-list { gap: var(--spacing-xs); }
+/* ---------- TABELLA DATI (Elementi & Link) ---------- */
+.clients-table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.data-table thead th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  white-space: nowrap;
+}
+.data-table tbody tr:hover { background: var(--color-primary-opacity-10); }
+.data-table__name { font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
+.data-table__link { color: var(--color-text-secondary); text-decoration: none; word-break: break-all; }
+.data-table__link:hover { text-decoration: underline; }
+.data-table__link--unsafe { color: var(--color-text-muted); text-decoration: line-through; cursor: help; }
+.data-table__muted { color: var(--color-text-muted); }
+.data-table__actions-col { text-align: right; }
+.data-table__actions { white-space: nowrap; text-align: right; }
+.data-table__actions .client-item__action-btn { display: inline-flex; }
 
 /* Gestione gruppi (modale) */
 .group-manager__add {

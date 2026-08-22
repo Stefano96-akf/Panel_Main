@@ -127,7 +127,9 @@ Chiave ausiliaria: `panel_current_board` (id della bacheca attiva).
 Chiavi ausiliarie (stringhe JSON `"true"`/`"false"`):
 `panel_dark_mode`, `panel_layout_expanded`, `panlink_sidebar_collapsed`.
 
-Vista Elementi: `panel_clients_view` = `"comoda"` | `"compatta"` | `"affiancata"`.
+Vista Elementi: gli elementi sono resi come **tabella** (`DOM.renderClients` →
+`.data-table`: Nome, Link, Gruppo, Asset/Tag, Azioni). Ogni sezione usa lo schema
+"barra strumenti (`.section-toolbar`) → `<hr class="panel__divider">` → contenuto".
 
 > `Clients.normalize()` rende retro-compatibili i record vecchi (`name` → `nome`,
 > default per `assets`/`createdAt`). Applicare lo stesso pattern quando si estende
