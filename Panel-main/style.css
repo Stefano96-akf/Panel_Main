@@ -285,6 +285,18 @@ html.dark .header__logo {
   color: var(--color-text-primary);
 }
 
+/* Il nome della sezione è ora nell'header in alto: nascondi il titolo interno
+   duplicato. Resta nel DOM per l'accessibilità (aria-labelledby) e come sorgente
+   del titolo dell'header (vedi SidebarNav.setActive). */
+.page .panel__title { display: none; }
+/* Wrapper del solo titolo → via (evita il gap vuoto) */
+#section-dashboard > .panel__header,
+#section-clients > .panel__header { display: none; }
+/* Nelle sezioni senza barra strumenti il divider iniziale ora è superfluo */
+#section-dashboard > .panel__divider,
+#section-team > .panel__divider,
+#section-profile > .panel__divider { display: none; }
+
 .card {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
