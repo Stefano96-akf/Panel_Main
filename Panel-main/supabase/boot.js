@@ -180,6 +180,13 @@
     if (user) {
       showGate(false);
       mountLogout(user);
+      // Collaboratori è sempre disponibile da loggati: mostralo SUBITO insieme
+      // agli altri link. Senza questo appariva "in ritardo", perché lo rivelava
+      // solo applyPermissions() dopo bootstrap + sync (chiamate di rete).
+      try {
+        document.getElementById('section-team')?.classList.remove('perm-hidden');
+        document.querySelector('[data-nav-target="section-team"]')?.classList.remove('perm-hidden');
+      } catch (e) {}
       // Ogni passo è isolato: un errore in bootstrap/sync non deve impedire
       // l'applicazione dei permessi né il render della sezione Collaboratori
       // (bug: senza questo, un intoppo nella sync nascondeva i controlli admin).
