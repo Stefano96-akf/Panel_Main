@@ -3259,6 +3259,11 @@ const SidebarNav = {
         link.removeAttribute('aria-current');
       }
     });
+    // Nome in alto (header) = titolo della sezione attiva
+    const titleEl = document.querySelector('.header__title');
+    const section = document.getElementById(targetId);
+    const h2 = section ? section.querySelector('.panel__title') : null;
+    if (titleEl && h2) titleEl.textContent = h2.textContent.trim();
   },
   updateToggleAria() {
     const expanded = SidebarNav.isMobile()

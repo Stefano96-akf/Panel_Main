@@ -178,7 +178,7 @@ html.dark .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   gap: var(--spacing-lg);
 }
@@ -2707,7 +2707,8 @@ html.dark .kanban__list.is-over {
 .container {
   display: block;              /* annulla la griglia a 2 colonne */
   grid-template-columns: none;
-  max-width: 1040px;
+  max-width: 1600px;           /* più largo: la sezione riempie lo schermo */
+  padding: var(--spacing-md);  /* meno padding esterno: sezioni più vicine al bordo/header */
 }
 
 .page { display: none; }
