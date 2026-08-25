@@ -180,12 +180,14 @@
     if (user) {
       showGate(false);
       mountLogout(user);
-      // Collaboratori è sempre disponibile da loggati: mostralo SUBITO insieme
-      // agli altri link. Senza questo appariva "in ritardo", perché lo rivelava
-      // solo applyPermissions() dopo bootstrap + sync (chiamate di rete).
+      // Collaboratori e chip Profilo sono sempre disponibili da loggati: mostrali
+      // SUBITO insieme agli altri link. Senza questo apparivano "in ritardo",
+      // perché li rivelavano applyPermissions()/Profile.mount() dopo bootstrap +
+      // sync (chiamate di rete). Il contenuto (email, permessi) viene riempito dopo.
       try {
         document.getElementById('section-team')?.classList.remove('perm-hidden');
         document.querySelector('[data-nav-target="section-team"]')?.classList.remove('perm-hidden');
+        document.getElementById('profileChip')?.classList.remove('perm-hidden');
       } catch (e) {}
       // Ogni passo è isolato: un errore in bootstrap/sync non deve impedire
       // l'applicazione dei permessi né il render della sezione Collaboratori

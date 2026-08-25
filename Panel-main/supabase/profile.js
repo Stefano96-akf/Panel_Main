@@ -64,48 +64,69 @@ const Profile = {
     const url = Profile.referUrl();
     const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
+    const accountPanel =
+      '<section class="profile-block">' +
+        '<h3 class="profile-sec__title">Account</h3>' +
+        '<div class="profile-row"><span>Email</span><b>' + Profile.esc(u.email || '—') + '</b></div>' +
+        (w ? '<div class="profile-row"><span>Spazio</span><b>' + Profile.esc(w.name) + ' · ' + Profile.esc(role) + '</b></div>' : '') +
+        '<div class="profile-row"><span>Membro dal</span><b>' + Profile.fmtDate(u.created_at) + '</b></div>' +
+        '<button class="btn btn--secondary profile-logout" data-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Esci</button>' +
+        '<button class="btn btn--secondary" data-export-all><i class="fa-solid fa-download" aria-hidden="true"></i> Scarica i miei dati</button>' +
+      '</section>' +
+      '<section class="profile-block profile-block--danger">' +
+        '<h3 class="profile-sec__title">Elimina account</h3>' +
+        '<p class="profile-hint">Elimina definitivamente il tuo account e tutti i tuoi dati, inclusi i contenuti e gli spazi di lavoro che possiedi. L\'azione è irreversibile.</p>' +
+        '<button class="btn btn--danger" data-delete-account><i class="fa-solid fa-trash" aria-hidden="true"></i> Elimina account</button>' +
+      '</section>';
+
+    const securityPanel =
+      '<section class="profile-block">' +
+        '<h3 class="profile-sec__title">Cambia password</h3>' +
+        '<div class="form-group"><label class="form-label" for="ppNew">Nuova password</label>' +
+          '<input type="password" id="ppNew" class="input" autocomplete="new-password" minlength="8" placeholder="Almeno 8 caratteri"></div>' +
+        '<div class="form-group"><label class="form-label" for="ppConfirm">Conferma password</label>' +
+          '<input type="password" id="ppConfirm" class="input" autocomplete="new-password" placeholder="Ripeti la password"></div>' +
+        '<button class="btn btn--primary" data-savepw>Aggiorna password</button>' +
+        '<p class="profile-msg" id="ppMsg" role="status"></p>' +
+      '</section>';
+
+    const referPanel =
+      '<section class="profile-block">' +
+        '<h3 class="profile-sec__title">Consiglia Skelety</h3>' +
+        '<p class="profile-hint">Condividi Skelety con qualcuno che potrebbe trovarlo utile.</p>' +
+        '<div class="profile-refer">' +
+          '<input class="input" id="referLink" readonly value="' + Profile.esc(url) + '" aria-label="Link di Skelety">' +
+          '<button class="btn btn--secondary" data-copy>Copia link</button>' +
+        '</div>' +
+        '<div class="profile-refer__actions">' +
+          '<a class="btn btn--secondary" href="mailto:?subject=' + encodeURIComponent('Ti consiglio Skelety') + '&body=' + encodeURIComponent(Profile.referMsg(url)) + '"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Email</a>' +
+          (canShare ? '<button class="btn btn--secondary" data-share><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Condividi</button>' : '') +
+        '</div>' +
+      '</section>';
+
     host.innerHTML =
-      '<div class="profile-grid">' +
+      '<div class="profile-tabs" role="tablist" aria-label="Impostazioni profilo">' +
+        '<button class="profile-tab is-active" role="tab" aria-selected="true" data-tab="account">Account</button>' +
+        '<button class="profile-tab" role="tab" aria-selected="false" data-tab="sicurezza">Sicurezza</button>' +
+        '<button class="profile-tab" role="tab" aria-selected="false" data-tab="consiglia">Consiglia</button>' +
+      '</div>' +
+      '<div class="profile-panel is-active" role="tabpanel" data-panel="account">' + accountPanel + '</div>' +
+      '<div class="profile-panel" role="tabpanel" data-panel="sicurezza">' + securityPanel + '</div>' +
+      '<div class="profile-panel" role="tabpanel" data-panel="consiglia">' + referPanel + '</div>';
+  },
 
-        '<section class="profile-block">' +
-          '<h3 class="profile-sec__title">Account</h3>' +
-          '<div class="profile-row"><span>Email</span><b>' + Profile.esc(u.email || '—') + '</b></div>' +
-          (w ? '<div class="profile-row"><span>Spazio</span><b>' + Profile.esc(w.name) + ' · ' + Profile.esc(role) + '</b></div>' : '') +
-          '<div class="profile-row"><span>Membro dal</span><b>' + Profile.fmtDate(u.created_at) + '</b></div>' +
-          '<button class="btn btn--secondary profile-logout" data-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Esci</button>' +
-          '<button class="btn btn--secondary" data-export-all><i class="fa-solid fa-download" aria-hidden="true"></i> Scarica i miei dati</button>' +
-        '</section>' +
-
-        '<section class="profile-block">' +
-          '<h3 class="profile-sec__title">Cambia password</h3>' +
-          '<div class="form-group"><label class="form-label" for="ppNew">Nuova password</label>' +
-            '<input type="password" id="ppNew" class="input" autocomplete="new-password" minlength="8" placeholder="Almeno 8 caratteri"></div>' +
-          '<div class="form-group"><label class="form-label" for="ppConfirm">Conferma password</label>' +
-            '<input type="password" id="ppConfirm" class="input" autocomplete="new-password" placeholder="Ripeti la password"></div>' +
-          '<button class="btn btn--primary" data-savepw>Aggiorna password</button>' +
-          '<p class="profile-msg" id="ppMsg" role="status"></p>' +
-        '</section>' +
-
-        '<section class="profile-block profile-block--wide">' +
-          '<h3 class="profile-sec__title">Consiglia Skelety</h3>' +
-          '<p class="profile-hint">Condividi Skelety con qualcuno che potrebbe trovarlo utile.</p>' +
-          '<div class="profile-refer">' +
-            '<input class="input" id="referLink" readonly value="' + Profile.esc(url) + '" aria-label="Link di Skelety">' +
-            '<button class="btn btn--secondary" data-copy>Copia link</button>' +
-          '</div>' +
-          '<div class="profile-refer__actions">' +
-            '<a class="btn btn--secondary" href="mailto:?subject=' + encodeURIComponent('Ti consiglio Skelety') + '&body=' + encodeURIComponent(Profile.referMsg(url)) + '"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Email</a>' +
-            (canShare ? '<button class="btn btn--secondary" data-share><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Condividi</button>' : '') +
-          '</div>' +
-        '</section>' +
-
-        '<section class="profile-block profile-block--wide profile-block--danger">' +
-          '<h3 class="profile-sec__title">Elimina account</h3>' +
-          '<p class="profile-hint">Elimina definitivamente il tuo account e tutti i tuoi dati, inclusi i contenuti e gli spazi di lavoro che possiedi. L\'azione è irreversibile.</p>' +
-          '<button class="btn btn--danger" data-delete-account><i class="fa-solid fa-trash" aria-hidden="true"></i> Elimina account</button>' +
-        '</section>' +
-
-      '</div>';
+  // Cambio tab nel profilo
+  switchTab(key) {
+    const host = document.getElementById('profileContent');
+    if (!host) return;
+    host.querySelectorAll('.profile-tab').forEach(function (t) {
+      const on = t.dataset.tab === key;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    host.querySelectorAll('.profile-panel').forEach(function (p) {
+      p.classList.toggle('is-active', p.dataset.panel === key);
+    });
   },
 
   // Esporta tutti i dati dell'utente (portabilità) in un file JSON
@@ -159,6 +180,9 @@ const Profile = {
   },
 
   async onClick(e) {
+    const tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) { Profile.switchTab(tabBtn.dataset.tab); return; }
+
     if (e.target.closest('[data-logout]')) { try { await SupaAuth.signOut(); } catch (_) {} return; }
     if (e.target.closest('[data-export-all]')) { Profile.exportAll(); return; }
     if (e.target.closest('[data-delete-account]')) { Profile.deleteAccount(); return; }
