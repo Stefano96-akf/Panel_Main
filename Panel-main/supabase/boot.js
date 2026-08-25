@@ -175,6 +175,7 @@
   // ---- Stato di autenticazione ----
   SupaSync.install();          // aggancia Storage.set
   if (window.Team) Team.init(); // bind UI Collaboratori (una volta)
+  if (window.Skelly) Skelly.init(); // bind chat Skelly (una volta)
 
   SupaAuth.onChange(async (user) => {
     if (user) {

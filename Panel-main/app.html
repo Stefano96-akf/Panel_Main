@@ -99,6 +99,10 @@
           <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
           <span>Dashboard</span>
         </a>
+        <a href="#section-skelly" class="app-sidebar__link" data-nav-target="section-skelly" title="Skelly — assistente AI">
+          <svg class="app-sidebar__ico-svg" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#B9FF66" stroke="#191A23" stroke-width="2.5"/><path fill="#191A23" d="M24 8C15 8 9 14 9 22c0 4.6 1.9 7.3 3.7 9.1.9.9 1.3 1.7 1.3 3.5v2.6a2.6 2.6 0 0 0 2.6 2.6h1v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h1a2.6 2.6 0 0 0 2.6-2.6v-2.6c0-1.8.4-2.6 1.3-3.5C37.1 29.3 39 26.6 39 22c0-8-6-14-15-14Z"/><circle cx="18" cy="23" r="4.6" fill="#B9FF66"/><circle cx="30" cy="23" r="4.6" fill="#B9FF66"/><circle cx="18.6" cy="23.4" r="1.9" fill="#191A23"/><circle cx="29.4" cy="23.4" r="1.9" fill="#191A23"/><path fill="#B9FF66" d="M24 27l-2.1 3.4h4.2z"/></svg>
+          <span>Skelly</span>
+        </a>
         <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" title="Elementi & Link">
           <i class="fa-solid fa-address-book" aria-hidden="true"></i>
           <span>Elementi & Link</span>
@@ -149,6 +153,18 @@
       </div>
       <hr class="panel__divider">
       <div id="dashboardBody" class="dashboard"></div>
+    </section>
+
+    <!-- Pagina: Skelly (assistente AI) -->
+    <section id="section-skelly" class="page panel" aria-labelledby="skelly-title">
+      <h2 id="skelly-title" class="panel__title">Skelly</h2>
+      <div class="skelly">
+        <div id="skellyLog" class="skelly__log" aria-live="polite" aria-label="Conversazione con Skelly"></div>
+        <form id="skellyForm" class="skelly__form" autocomplete="off">
+          <input id="skellyInput" class="input skelly__input" type="text" placeholder="Scrivi a Skelly… es. «aggiungi nota: chiamare il cliente»" aria-label="Messaggio per Skelly">
+          <button class="btn btn--primary" type="submit" aria-label="Invia messaggio"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        </form>
+      </div>
     </section>
 
     <section id="section-clients" class="page panel" aria-labelledby="clients-title">
@@ -429,6 +445,7 @@
   <script src="supabase/sync.js"></script>
   <script src="supabase/team.js"></script>
   <script src="supabase/profile.js"></script>
+  <script src="supabase/skelly.js"></script>
 
   <!-- Main App Script -->
   <script src="app.js"></script>
