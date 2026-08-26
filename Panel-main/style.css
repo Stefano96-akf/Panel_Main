@@ -939,7 +939,16 @@ select {
 
 .note-item__content {
   flex: 1;
+  min-width: 0; /* consente il troncamento con ellissi dentro il flex */
 }
+.note-item__text--clamped { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item__more {
+  background: none; border: 0; padding: 0; margin-top: 4px;
+  color: var(--color-primary); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+.note-item__more[hidden] { display: none; }
+.note-item__more:hover { text-decoration: underline; }
 
 .note-item__text {
   color: var(--color-text-primary);

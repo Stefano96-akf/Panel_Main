@@ -1610,6 +1610,7 @@ const DOM = {
       li.innerHTML = `
         <div class="note-item__content">
           <div class="note-item__text">${Utils.escapeHtml(note.text)}</div>
+          <button class="note-item__more" type="button" data-note-more hidden>Mostra di più</button>
           <div class="note-item__date">${Utils.formatDate(note.createdAt)}</div>
         </div>
         <div class="note-item__actions">
@@ -1622,6 +1623,24 @@ const DOM = {
         </div>
       `;
       DOM.notesList.appendChild(li);
+    });
+    DOM.updateNoteClamps();
+  },
+
+  // Mostra "Mostra di più" solo se il testo della nota trabocca su una riga.
+  // Va (ri)eseguito quando la sezione Note è visibile (misure reali) e al resize.
+  updateNoteClamps() {
+    if (!DOM.notesList) return;
+    DOM.notesList.querySelectorAll('.note-item').forEach(item => {
+      if (item.classList.contains('is-expanded')) return;
+      const text = item.querySelector('.note-item__text');
+      const more = item.querySelector('.note-item__more');
+      if (!text || !more) return;
+      text.classList.add('note-item__text--clamped');
+      const overflows = text.scrollWidth > text.clientWidth + 1;
+      more.hidden = !overflows;
+      if (overflows) more.textContent = 'Mostra di più';
+      else text.classList.remove('note-item__text--clamped');
     });
   },
 
@@ -2531,6 +2550,16 @@ const UI = {
     });
 
     DOM.notesList.addEventListener('click', (e) => {
+      const moreBtn = e.target.closest('[data-note-more]');
+      if (moreBtn) {
+        const item = moreBtn.closest('.note-item');
+        const text = item && item.querySelector('.note-item__text');
+        if (!item || !text) return;
+        const expanded = item.classList.toggle('is-expanded');
+        if (expanded) { text.classList.remove('note-item__text--clamped'); moreBtn.textContent = 'Mostra di meno'; }
+        else { text.classList.add('note-item__text--clamped'); moreBtn.textContent = 'Mostra di più'; }
+        return;
+      }
       const editBtn = e.target.closest('[data-edit-note]');
       if (editBtn) { UI.handleEditNote(editBtn.dataset.editNote); return; }
       const deleteBtn = e.target.closest('[data-delete-note]');
@@ -2539,6 +2568,8 @@ const UI = {
         UI.handleDeleteNote(noteId);
       }
     });
+
+    window.addEventListener('resize', Utils.debounce(() => DOM.updateNoteClamps(), 150));
 
     DOM.renderNotes();
   },
@@ -3266,6 +3297,7 @@ const SidebarNav = {
     });
     SidebarNav.setActive(targetId);
     if (targetId === 'section-settings' && window.Settings && Settings.render) Settings.render();
+    if (targetId === 'section-notes' && DOM.updateNoteClamps) DOM.updateNoteClamps();
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (SidebarNav.isMobile()) {
       document.body.classList.remove('sidebar-open');
