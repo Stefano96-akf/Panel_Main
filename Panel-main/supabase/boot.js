@@ -176,6 +176,7 @@
   SupaSync.install();          // aggancia Storage.set
   if (window.Team) Team.init(); // bind UI Collaboratori (una volta)
   if (window.Skelly) Skelly.init(); // bind chat Skelly (una volta)
+  if (window.Settings) Settings.init(); // bind UI Impostazioni (una volta)
 
   SupaAuth.onChange(async (user) => {
     if (user) {
@@ -188,6 +189,8 @@
       try {
         document.getElementById('section-team')?.classList.remove('perm-hidden');
         document.querySelector('[data-nav-target="section-team"]')?.classList.remove('perm-hidden');
+        document.getElementById('section-settings')?.classList.remove('perm-hidden');
+        document.querySelector('[data-nav-target="section-settings"]')?.classList.remove('perm-hidden');
         document.getElementById('profileChip')?.classList.remove('perm-hidden');
       } catch (e) {}
       // Ogni passo è isolato: un errore in bootstrap/sync non deve impedire
@@ -198,6 +201,7 @@
       try { await SupaSync.initialSync(user); } catch (e) { console.error('[boot] initialSync', e); }
       try { SkeletyGate.applyPermissions(); } catch (e) { console.error('[boot] applyPermissions', e); }
       try { if (window.Team) await Team.render(); } catch (e) { console.error('[boot] Team.render', e); }
+      try { if (window.Settings) await Settings.render(); } catch (e) { console.error('[boot] Settings.render', e); }
       try { if (window.Profile) Profile.mount(user); } catch (e) { console.error('[boot] Profile.mount', e); }
       // Rientro da link di reset password → guida l'utente al cambio password
       try {

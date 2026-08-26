@@ -12,6 +12,7 @@
 //   ANTHROPIC_API_KEY   chiave API di Anthropic
 //   SKELLY_MODEL        (opzionale) id modello, default claude-haiku-4-5-20251001
 // ============================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -81,6 +82,21 @@ Deno.serve(async (req) => {
     if (!ANTHROPIC_API_KEY) {
       return json({ ok: false, reason: "not_configured", reply: "Skelly non è ancora attivo: manca la chiave API di Anthropic. Il proprietario deve impostarla nei secret della funzione." }, 200);
     }
+
+    // Rate-limit giornaliero per-utente (protegge dai costi/abusi). Se il controllo
+    // non è disponibile non blocchiamo l'uso.
+    const LIMIT = Number(Deno.env.get("SKELLY_DAILY_LIMIT") || "60");
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: req.headers.get("Authorization") || "" } } },
+      );
+      const { data: rc } = await supabase.rpc("skelly_rate_check", { p_limit: LIMIT });
+      if (rc && rc.allowed === false) {
+        return json({ ok: false, reason: "rate_limited", reply: `Hai raggiunto il limite di ${LIMIT} messaggi al giorno con Skelly. Riprova domani.` }, 200);
+      }
+    } catch (_) { /* check non disponibile → prosegui */ }
 
     const system =
       "Sei Skelly, l'assistente dentro Skelety — uno spazio di lavoro con note, elementi/link, attività, appuntamenti e asset. " +

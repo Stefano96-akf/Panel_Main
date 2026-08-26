@@ -699,6 +699,15 @@ const Notes = {
     return newNote;
   },
 
+  update(id, text) {
+    const notes = Notes.getAll();
+    const note = notes.find(n => n.id === id);
+    if (!note) return false;
+    note.text = text;
+    Notes.save(notes);
+    return true;
+  },
+
   delete(id) {
     const notes = Notes.getAll();
     const filtered = notes.filter(n => n.id !== id);
@@ -1603,9 +1612,14 @@ const DOM = {
           <div class="note-item__text">${Utils.escapeHtml(note.text)}</div>
           <div class="note-item__date">${Utils.formatDate(note.createdAt)}</div>
         </div>
-        <button class="note-item__delete" title="Elimina nota" data-delete-note="${note.id}">
-          <i class="fa-solid fa-trash"></i>
-        </button>
+        <div class="note-item__actions">
+          <button class="note-item__edit" title="Modifica nota" data-edit-note="${note.id}">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="note-item__delete" title="Elimina nota" data-delete-note="${note.id}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
       `;
       DOM.notesList.appendChild(li);
     });
@@ -2517,6 +2531,8 @@ const UI = {
     });
 
     DOM.notesList.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-edit-note]');
+      if (editBtn) { UI.handleEditNote(editBtn.dataset.editNote); return; }
       const deleteBtn = e.target.closest('[data-delete-note]');
       if (deleteBtn) {
         const noteId = deleteBtn.dataset.deleteNote;
@@ -2525,6 +2541,22 @@ const UI = {
     });
 
     DOM.renderNotes();
+  },
+
+  handleEditNote(noteId) {
+    const note = Notes.getAll().find(n => n.id === noteId);
+    if (!note) return;
+    Modal.open('Modifica nota',
+      '<div class="form-group"><label class="label" for="editNoteText">Testo</label>' +
+      '<textarea id="editNoteText" class="input textarea" rows="5" placeholder="Testo della nota">' + Utils.escapeHtml(note.text) + '</textarea></div>',
+      (body) => {
+        const text = body.querySelector('#editNoteText').value;
+        const validation = Validators.validateNote(text);
+        if (!validation.valid) { Toast.error(validation.error); return false; }
+        Notes.update(noteId, text.trim());
+        DOM.renderNotes();
+        Toast.success('Nota aggiornata');
+      });
   },
 
   handleAddNote() {
@@ -3167,6 +3199,8 @@ const SidebarNav = {
     SidebarNav.bindLinks();
     SidebarNav.bindRouting();
     SidebarNav.bindOutsideClose();
+    // Bottone "Skelly AI" nell'header → apre la sezione Skelly
+    document.getElementById('skellyOpen')?.addEventListener('click', () => SidebarNav.showPage('section-skelly'));
   },
   isMobile() {
     return window.matchMedia('(max-width: 1024px)').matches;
@@ -3231,6 +3265,7 @@ const SidebarNav = {
       page.classList.toggle('is-active', page.id === targetId);
     });
     SidebarNav.setActive(targetId);
+    if (targetId === 'section-settings' && window.Settings && Settings.render) Settings.render();
     window.scrollTo({ top: 0, behavior: 'auto' });
     if (SidebarNav.isMobile()) {
       document.body.classList.remove('sidebar-open');

@@ -83,6 +83,7 @@
           <tr><td>Account</td><td>Indirizzo email e password</td><td>Forniti da te in fase di registrazione/accesso</td></tr>
           <tr><td>Contenuti dell'app</td><td>Elementi &amp; link, asset, note, attività e bacheche, appuntamenti, gruppi</td><td>Inseriti da te durante l'uso</td></tr>
           <tr><td>Dati tecnici di sessione</td><td>Token di autenticazione, preferenze di visualizzazione (tema, viste)</td><td>Generati automaticamente per far funzionare il servizio</td></tr>
+          <tr><td>Assistente Skelly (opzionale)</td><td>Il testo dei messaggi che scrivi all'assistente AI "Skelly"</td><td>Inserito da te; inviato ad Anthropic solo quando usi la funzione (vedi §5)</td></tr>
         </table>
         <p>La password non è visibile in chiaro: viene gestita e conservata in forma cifrata dal fornitore di autenticazione (vedi §5). Non raccogliamo dati di pagamento né categorie particolari di dati.</p>
       </section>
@@ -114,7 +115,8 @@
         <ul>
           <li><b>Supabase</b> — autenticazione e database (conservazione dell'email e dei contenuti). <span class="ph">[verifica la region dei dati]</span></li>
           <li><b>Vercel</b> — hosting del sito e distribuzione delle pagine.</li>
-          <li><span class="ph">[Eventuale provider email per gli inviti, se attivato]</span></li>
+          <li><b>Brevo</b> — invio delle email di invito ai collaboratori (tratta l'indirizzo email dell'invitato).</li>
+          <li><b>Anthropic</b> — assistente AI &laquo;Skelly&raquo;: elabora il testo dei messaggi che scrivi a Skelly per proporre le azioni, solo quando usi la funzione. Il testo non viene utilizzato per addestrare modelli.</li>
         </ul>
         <p>I dati non vengono ceduti a terzi per finalità di marketing.</p>
       </section>
@@ -126,7 +128,7 @@
 
       <section class="block">
         <h2>7. Trasferimenti extra-UE</h2>
-        <p>A seconda della configurazione dei fornitori (Supabase, Vercel), i dati potrebbero essere trattati anche al di fuori dello Spazio Economico Europeo, con garanzie adeguate (es. Clausole Contrattuali Standard). <span class="ph">[Conferma la region e le garanzie applicabili]</span></p>
+        <p>A seconda della configurazione dei fornitori (Supabase, Vercel, Brevo, Anthropic), i dati potrebbero essere trattati anche al di fuori dello Spazio Economico Europeo, con garanzie adeguate (es. Clausole Contrattuali Standard). <span class="ph">[Conferma la region e le garanzie applicabili]</span></p>
       </section>
 
       <section class="block">

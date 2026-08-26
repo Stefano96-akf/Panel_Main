@@ -116,6 +116,7 @@
 .page.is-readonly .task-item__actions,
 .page.is-readonly .kanban-card__actions,
 .page.is-readonly .note-item__delete,
+.page.is-readonly .note-item__actions,
 .page.is-readonly .appt-item__actions { display: none !important; }
 .page.is-readonly .task-item__checkbox,
 .page.is-readonly .appt-item__checkbox { pointer-events: none; opacity: .5; }

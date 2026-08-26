@@ -74,6 +74,10 @@
       </div>
 
       <div class="header__controls">
+        <button id="skellyOpen" type="button" class="btn btn--primary btn--small header__skelly" title="Apri Skelly AI" aria-label="Apri Skelly AI">
+          <svg viewBox="0 0 48 48" width="16" height="16" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#B9FF66" stroke="#191A23" stroke-width="2.5"/><path fill="#191A23" d="M24 8C15 8 9 14 9 22c0 4.6 1.9 7.3 3.7 9.1.9.9 1.3 1.7 1.3 3.5v2.6a2.6 2.6 0 0 0 2.6 2.6h1v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h1a2.6 2.6 0 0 0 2.6-2.6v-2.6c0-1.8.4-2.6 1.3-3.5C37.1 29.3 39 26.6 39 22c0-8-6-14-15-14Z"/><circle cx="18" cy="23" r="4.6" fill="#B9FF66"/><circle cx="30" cy="23" r="4.6" fill="#B9FF66"/><circle cx="18.6" cy="23.4" r="1.9" fill="#191A23"/><circle cx="29.4" cy="23.4" r="1.9" fill="#191A23"/><path fill="#B9FF66" d="M24 27l-2.1 3.4h4.2z"/></svg>
+          <span class="header__skelly-txt">Skelly AI</span>
+        </button>
         <button id="sidebarToggle" class="btn btn--icon sidebar-toggle" aria-label="Apri menu navigazione" aria-controls="appSidebar" aria-expanded="false" title="Menu">
           <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
@@ -99,13 +103,9 @@
           <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
           <span>Dashboard</span>
         </a>
-        <a href="#section-skelly" class="app-sidebar__link" data-nav-target="section-skelly" title="Skelly — assistente AI">
-          <svg class="app-sidebar__ico-svg" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#B9FF66" stroke="#191A23" stroke-width="2.5"/><path fill="#191A23" d="M24 8C15 8 9 14 9 22c0 4.6 1.9 7.3 3.7 9.1.9.9 1.3 1.7 1.3 3.5v2.6a2.6 2.6 0 0 0 2.6 2.6h1v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h2.5v-3.7h1.8v3.7h1a2.6 2.6 0 0 0 2.6-2.6v-2.6c0-1.8.4-2.6 1.3-3.5C37.1 29.3 39 26.6 39 22c0-8-6-14-15-14Z"/><circle cx="18" cy="23" r="4.6" fill="#B9FF66"/><circle cx="30" cy="23" r="4.6" fill="#B9FF66"/><circle cx="18.6" cy="23.4" r="1.9" fill="#191A23"/><circle cx="29.4" cy="23.4" r="1.9" fill="#191A23"/><path fill="#B9FF66" d="M24 27l-2.1 3.4h4.2z"/></svg>
-          <span>Skelly</span>
-        </a>
-        <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" title="Elementi & Link">
+        <a href="#section-clients" class="app-sidebar__link" data-nav-target="section-clients" title="Elementi">
           <i class="fa-solid fa-address-book" aria-hidden="true"></i>
-          <span>Elementi & Link</span>
+          <span>Elementi</span>
         </a>
         <a href="#section-assets" class="app-sidebar__link" data-nav-target="section-assets" title="Asset">
           <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
@@ -131,6 +131,10 @@
           <i class="fa-solid fa-users" aria-hidden="true"></i>
           <span>Collaboratori</span>
         </a>
+        <a href="#section-settings" class="app-sidebar__link perm-hidden" data-nav-target="section-settings" title="Impostazioni">
+          <i class="fa-solid fa-gear" aria-hidden="true"></i>
+          <span>Impostazioni</span>
+        </a>
       </nav>
       <a href="#section-profile" class="app-sidebar__link profile-chip perm-hidden" id="profileChip" data-nav-target="section-profile" aria-label="Profilo e account">
         <span class="profile-chip__ava" id="profileChipAva">?</span>
@@ -145,7 +149,7 @@
   <!-- Main Container: ogni sezione è una "pagina" mostrata singolarmente -->
   <main class="container" role="main">
 
-    <!-- Pagina: Elementi & Link -->
+    <!-- Pagina: Elementi -->
     <!-- Pagina: Dashboard (analytics) -->
     <section id="section-dashboard" class="page panel is-active" aria-labelledby="dashboard-title">
       <div class="panel__header">
@@ -157,7 +161,7 @@
 
     <!-- Pagina: Skelly (assistente AI) -->
     <section id="section-skelly" class="page panel" aria-labelledby="skelly-title">
-      <h2 id="skelly-title" class="panel__title">Skelly</h2>
+      <h2 id="skelly-title" class="panel__title">Skelly AI</h2>
       <div class="skelly">
         <div id="skellyLog" class="skelly__log" aria-live="polite" aria-label="Conversazione con Skelly"></div>
         <form id="skellyForm" class="skelly__form" autocomplete="off">
@@ -169,7 +173,7 @@
 
     <section id="section-clients" class="page panel" aria-labelledby="clients-title">
       <div class="panel__header">
-        <h2 id="clients-title" class="panel__title">Elementi & Link</h2>
+        <h2 id="clients-title" class="panel__title">Elementi</h2>
       </div>
 
       <!-- Barra strumenti: ricerca, filtri, aggiunta, import/export -->
@@ -391,6 +395,12 @@
       <div id="teamContent" class="team"></div>
     </section>
 
+    <!-- Pagina: Impostazioni (Gestione Permessi) -->
+    <section id="section-settings" class="page panel perm-hidden" aria-labelledby="settings-title">
+      <h2 id="settings-title" class="panel__title">Impostazioni</h2>
+      <div id="settingsContent" class="settings"></div>
+    </section>
+
     <!-- Pagina: Profilo (visibile solo dopo il login) -->
     <section id="section-profile" class="page panel" aria-labelledby="profile-title">
       <h2 id="profile-title" class="panel__title">Profilo</h2>
@@ -446,6 +456,7 @@
   <script src="supabase/team.js"></script>
   <script src="supabase/profile.js"></script>
   <script src="supabase/skelly.js"></script>
+  <script src="supabase/settings.js"></script>
 
   <!-- Main App Script -->
   <script src="app.js"></script>

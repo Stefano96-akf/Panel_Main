@@ -969,6 +969,19 @@ select {
   background-color: rgba(239, 68, 68, 0.1);
 }
 
+.note-item__actions { display: flex; gap: var(--spacing-xs); flex-shrink: 0; }
+.note-item__edit {
+  padding: var(--spacing-sm);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-in-out);
+  flex-shrink: 0;
+}
+.note-item__edit:hover { color: var(--color-primary); background-color: var(--color-primary-light); }
+
 /* ---------- TASKS LIST ---------- */
 .tasks-list {
   list-style: none;
@@ -2833,6 +2846,16 @@ body.sidebar-collapsed .profile-chip > i { display: none; }
 .skelly__dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes skellyBlink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .skelly__dots i { animation: none; } }
+
+/* ---------- IMPOSTAZIONI (Gestione Permessi) ---------- */
+.settings__sel { width: auto; min-width: 118px; margin: 0; padding: var(--spacing-xs) var(--spacing-sm); }
+.settings__table th, .settings__table td { white-space: nowrap; }
+.settings__table td[data-label="Utente"] { white-space: normal; }
+
+/* Bottone "Skelly AI" nell'header */
+.header__skelly { display: inline-flex; align-items: center; gap: 8px; }
+.header__skelly svg { flex: none; }
+@media (max-width: 560px) { .header__skelly-txt { display: none; } }
 .profile-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--color-border); }
 .profile-row:last-of-type { border-bottom: none; }
 .profile-row > span { color: var(--color-text-secondary); flex: none; }
