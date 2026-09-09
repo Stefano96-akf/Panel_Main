@@ -458,10 +458,27 @@
   <script src="supabase/skelly.js"></script>
   <script src="supabase/settings.js"></script>
 
-  <!-- Main App Script -->
-  <script src="app.js"></script>
+  <!-- Moduli app (vanilla, object-literal): caricati in ordine, nessun build step.
+       Sono classic script che condividono lo scope globale; main.js va per ultimo
+       perché inizializza tutto su DOMContentLoaded. -->
+  <script src="js/storage.js"></script>
+  <script src="js/validators.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/clients.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/appointments.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/dom.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/alertdialog.js"></script>
+  <script src="js/main.js"></script>
 
-  <!-- Bootstrap Supabase: DOPO app.js (aggancia Storage e le viste) -->
+  <!-- Bootstrap Supabase: DOPO i moduli app (aggancia Storage e le viste) -->
   <script src="supabase/boot.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /**
  * Bootstrap dell'integrazione Supabase (auth gate + avvio sync).
- * Da includere DOPO app.js. Inerte se Supabase non è configurato.
+ * Da includere DOPO i moduli app in js/. Inerte se Supabase non è configurato.
  */
 (function () {
   if (!window.sb) return; // nessuna config → app in modalità locale, nessun gate

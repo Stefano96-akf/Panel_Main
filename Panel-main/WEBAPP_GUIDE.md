@@ -14,7 +14,8 @@ Non usa backend: i dati sono salvati in `localStorage` del browser.
 ## 2. Stack e file principali
 - `index.html`: struttura UI (header, sidebar, pannelli, modal, toast)
 - `style.css`: stile completo (layout, dark mode, componenti, responsive)
-- `app.js`: logica applicativa modulare (storage, validazione, CRUD, rendering)
+- `js/`: logica applicativa modulare, un modulo per file (storage, validazione, CRUD,
+  rendering, UI…), caricati in ordine da `app.html` — nessun build step
 - `favicon.svg`: icona tab browser
 - `vendor/`: font (Inter) e icone (Font Awesome) in locale — nessun CDN, l'app
   funziona completamente offline via `file://`

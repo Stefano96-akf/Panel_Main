@@ -38,7 +38,11 @@ Panel-main/
 ├── index.html          # Landing page pubblica (Skelety) — entry point su /
 ├── app.html            # L'app (dashboard a pagine) — dietro login Supabase
 ├── style.css           # Design system completo con CSS custom properties
-├── app.js              # Tutta la logica applicativa (moduli come object literal)
+├── js/                 # Logica applicativa: un modulo (object literal) per file,
+│                       #   classic script caricati in ordine da app.html:
+│                       #   storage,validators,utils,clients(+groups),assets,notes,
+│                       #   tasks(+boards),appointments,dashboard,toast,modal,dom,
+│                       #   ui,sidebar,alertdialog,main (main = init DOMContentLoaded)
 ├── favicon.svg
 │
 ├── vendor/             # Asset locali (offline, nessun CDN)
@@ -55,9 +59,20 @@ Panel-main/
 
 ## Architettura JavaScript
 
-`app.js` è organizzato in **moduli come object literal** (nessun ES module, nessun
-`import/export`, nessun bundler). Tutto è caricato con un singolo `<script src="app.js">`
-e inizializzato su `DOMContentLoaded`. Convenzione: ogni modulo è un `const NomeModulo = { ... }`.
+La logica applicativa è organizzata in **moduli come object literal** (nessun ES module,
+nessun `import/export`, nessun bundler), **un modulo per file** sotto `js/`. I file sono
+**classic script** caricati in ordine da `app.html`: condividono lo stesso scope globale,
+quindi i moduli si referenziano tra loro **per nome** (non serve `window.`, salvo i pochi
+già esposti — `window.Groups/Boards/Dashboard` — perché usati dai moduli `supabase/`).
+L'inizializzazione avviene in `js/main.js` su `DOMContentLoaded`. Convenzione: ogni modulo
+è un `const NomeModulo = { ... }`.
+
+Ordine di caricamento (`js/`, vedi i `<script>` in `app.html`): `storage` → `validators`
+→ `utils` → `clients` (+`groups`) → `assets` → `notes` → `tasks` (+`boards`) →
+`appointments` → `dashboard` → `toast` → `modal` → `dom` → `ui` → `sidebar` →
+`alertdialog` → `main`. Aggiungendo un modulo: creare `js/<nome>.js`, aggiungere il
+relativo `<script>` in `app.html` **prima** di `js/main.js`, e caricarlo **dopo** i
+moduli che usa a livello top-level (le dipendenze interne ai metodi non richiedono ordine).
 
 | Modulo | Responsabilità |
 |--------|----------------|
