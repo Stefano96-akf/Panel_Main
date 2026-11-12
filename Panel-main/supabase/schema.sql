@@ -38,6 +38,7 @@ create table if not exists public.notes (
   id          text primary key,
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   text        text not null,
+  completed   boolean not null default false,
   created_at  timestamptz not null default now()
 );
 

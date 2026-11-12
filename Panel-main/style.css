@@ -937,6 +937,10 @@ select {
   transform: translateY(-2px);
 }
 
+.note-item__checkbox { flex-shrink: 0; margin-top: 4px; cursor: pointer; }
+.note-item--completed { opacity: 0.6; }
+.note-item--completed .note-item__text { text-decoration: line-through; color: var(--color-text-muted); }
+
 .note-item__content {
   flex: 1;
   min-width: 0; /* consente il troncamento con ellissi dentro il flex */

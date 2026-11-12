@@ -119,6 +119,7 @@
 .page.is-readonly .note-item__actions,
 .page.is-readonly .appt-item__actions { display: none !important; }
 .page.is-readonly .task-item__checkbox,
+.page.is-readonly .note-item__checkbox,
 .page.is-readonly .appt-item__checkbox { pointer-events: none; opacity: .5; }
 .page.is-readonly .kanban-card { cursor: default; }
 

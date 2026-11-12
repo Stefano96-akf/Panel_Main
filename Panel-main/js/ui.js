@@ -530,6 +530,15 @@ const UI = {
       }
     });
 
+    // Toggle "completata" (checkbox) — stesso schema di attività/appuntamenti.
+    DOM.notesList.addEventListener('change', (e) => {
+      const checkbox = e.target.closest('[data-toggle-note]');
+      if (checkbox) {
+        Notes.toggle(checkbox.dataset.toggleNote);
+        DOM.renderNotes();
+      }
+    });
+
     window.addEventListener('resize', Utils.debounce(() => DOM.updateNoteClamps(), 150));
 
     DOM.renderNotes();

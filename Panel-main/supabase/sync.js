@@ -37,8 +37,8 @@ const SupaSync = {
     },
     panel_notes: {
       table: 'notes',
-      toRow: (n, uid, ws) => ({ id: n.id, user_id: uid, workspace_id: ws, text: n.text || '', created_at: n.createdAt }),
-      toApp: (r) => ({ id: r.id, text: r.text, createdAt: r.created_at })
+      toRow: (n, uid, ws) => ({ id: n.id, user_id: uid, workspace_id: ws, text: n.text || '', completed: !!n.completed, created_at: n.createdAt }),
+      toApp: (r) => ({ id: r.id, text: r.text, completed: !!r.completed, createdAt: r.created_at })
     },
     panel_tasks: {
       table: 'tasks',

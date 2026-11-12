@@ -15,6 +15,7 @@ const Notes = {
     const newNote = {
       id: Utils.generateId(),
       text,
+      completed: false,
       createdAt: new Date().toISOString()
     };
     notes.unshift(newNote);
@@ -31,6 +32,16 @@ const Notes = {
     return true;
   },
 
+  // Segna/desegna la nota come completata (flag indipendente, come per le attività).
+  toggle(id) {
+    const notes = Notes.getAll();
+    const note = notes.find(n => n.id === id);
+    if (!note) return false;
+    note.completed = !note.completed;
+    Notes.save(notes);
+    return true;
+  },
+
   delete(id) {
     const notes = Notes.getAll();
     const filtered = notes.filter(n => n.id !== id);
@@ -42,9 +53,9 @@ const Notes = {
     const notes = Notes.getAll();
     const rows = notes.map(n => ({
       Nota: n.text,
+      Completata: n.completed ? 'Sì' : 'No',
       'Data creazione': Utils.formatDate(n.createdAt)
     }));
-    return Utils.arrayToCsv(rows, ['Nota', 'Data creazione']);
+    return Utils.arrayToCsv(rows, ['Nota', 'Completata', 'Data creazione']);
   }
 };
-

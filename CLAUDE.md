@@ -82,7 +82,7 @@ moduli che usa a livello top-level (le dipendenze interne ai metodi non richiedo
 | `Clients` | CRUD "Elementi & Link". Chiave storage `panel_clients`. Ogni elemento può avere un `groupId` (gruppo/sotto-gruppo) e importarsi da CSV. |
 | `Groups` | Cartelle a 2 livelli (gruppo → sotto-gruppo) per gli Elementi. Locale su `panel_groups`; in cloud tabella `groups` (permesso sezione `clients`). |
 | `Assets` | CRUD asset riutilizzabili, associabili agli elementi tramite array di id. |
-| `Notes` | CRUD note. |
+| `Notes` | CRUD note + flag `completed` (toggle "completata", come i task). |
 | `Tasks` | CRUD attività. Ogni task referenzia una bacheca (`boardId`) e una colonna (`status` = id colonna). |
 | `Boards` | Bacheche Kanban multiple (max 3) con colonne dinamiche `[{id,label}]`. Locale su `panel_boards`; in cloud è online-first (tabella `boards` + `board_members`, accesso ristretto per-bacheca) con cache localStorage. |
 | `Appointments` | CRUD appuntamenti (tipo `remote`/`onsite`). UI "Calendario": griglia mensile + vista lista, filtri per tipo/completati, import/export CSV. |
@@ -123,7 +123,8 @@ Chiavi in `Storage.keys` più alcune ausiliarie. Ogni record ha `id` (stringa da
 { "id": "...", "name": "...", "description": "...", "createdAt": "ISO" }
 
 // panel_notes    → array
-{ "id": "...", "text": "...", "createdAt": "ISO" }
+// `completed` = flag indipendente (come i task) per la lista Note.
+{ "id": "...", "text": "...", "completed": false, "createdAt": "ISO" }
 
 // panel_tasks    → array
 // `status` = id della colonna nella bacheca `boardId`; `completed` è un flag

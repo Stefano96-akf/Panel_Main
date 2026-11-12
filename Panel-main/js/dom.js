@@ -92,8 +92,9 @@ const DOM = {
 
     notes.forEach(note => {
       const li = document.createElement('li');
-      li.className = 'note-item';
+      li.className = 'note-item' + (note.completed ? ' note-item--completed' : '');
       li.innerHTML = `
+        <input type="checkbox" class="note-item__checkbox" data-toggle-note="${note.id}" ${note.completed ? 'checked' : ''} aria-label="Completata" title="Segna come completata">
         <div class="note-item__content">
           <div class="note-item__text">${Utils.escapeHtml(note.text)}</div>
           <button class="note-item__more" type="button" data-note-more hidden>Mostra di più</button>
